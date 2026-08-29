@@ -1,0 +1,66 @@
+{
+  "heldout": {
+    "R0+R1": {
+      "credits_matched": 37,
+      "credits_total": 46,
+      "credits_unmatched": 9,
+      "drift_matches": 4,
+      "drift_paise": 155,
+      "match_rate_bps": 8043,
+      "matches_claimed": 37,
+      "matches_correct": 37,
+      "matches_expected": 44,
+      "model_cost_paise": 0,
+      "open_credit_paise": 248341539,
+      "open_settlement_paise": 292781840,
+      "payment_coverage_bps": 5738,
+      "payments_covered": 2892,
+      "payments_total": 5040,
+      "precision_bps": 10000,
+      "recall_bps": 8409,
+      "reconciled_paise": 403513221,
+      "run_ms": 0,
+      "rung_attribution": {
+        "R0": 32,
+        "R1": 5
+      },
+      "rungs": "R0+R1",
+      "seed": 20260331,
+      "settlements_total": 64,
+      "settlements_unmatched": 27,
+      "unexplained_paise": 10615457
+    }
+  },
+  "train": {
+    "R0+R1": {
+      "credits_matched": 35,
+      "credits_total": 46,
+      "credits_unmatched": 11,
+      "drift_matches": 5,
+      "drift_paise": 133,
+      "match_rate_bps": 7609,
+      "matches_claimed": 35,
+      "matches_correct": 35,
+      "matches_expected": 44,
+      "model_cost_paise": 0,
+      "open_credit_paise": 273493172,
+      "open_settlement_paise": 316892125,
+      "payment_coverage_bps": 5605,
+      "payments_covered": 2825,
+      "payments_total": 5040,
+      "precision_bps": 10000,
+      "recall_bps": 7955,
+      "reconciled_paise": 414962341,
+      "run_ms": 1,
+      "rung_attribution": {
+        "R0": 24,
+        "R1": 11
+      },
+      "rungs": "R0+R1",
+      "seed": 20260101,
+      "settlements_total": 64,
+      "settlements_unmatched": 29,
+      "unexplained_paise": 12568825
+    }
+  }
+}

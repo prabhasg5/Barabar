@@ -1,0 +1,13 @@
+[project]
+name = "barabar"
+version = "0.1.0"
+description = "Settlement reconciliation for Indian D2C merchants"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "hypothesis>=6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
