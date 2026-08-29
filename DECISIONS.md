@@ -43,11 +43,27 @@ heldout  seed 20260331   5,040 payments  64 settlements  46 bank rows   6 bundle
 ingest   5416 orders  5040 payments  176 refunds (185 heldout)  64 settlements  46 bank rows
 ```
 
-**Held-out, R0+R1: auto-match 80.43% (37 of 46 credits), precision 100.00%, recall 84.09%,
-payment coverage 57.38%.** Train: 76.09% / 100.00% / 79.55% / 56.05%. Payment coverage is
-the number R2 has to move — the unmatched credits are the bundled ones, which carry several
-times the payments of a single-batch credit. Baseline is in `eval/results.json` under
-`R0+R1`.
+Match rates, rungs R0+R1. **This is the baseline R2 must beat**, stored in
+`eval/results.json` keyed `<set> → "R0+R1"` so step 6 cannot overwrite it.
+
+| | held-out (20260331) | train (20260101) |
+|---|---|---|
+| auto-match rate | **80.43%** (37 of 46 credits) | 76.09% (35 of 46) |
+| precision | **100.00%** (37 of 37 claimed) | 100.00% (35 of 35) |
+| recall | **84.09%** (37 of 44 real) | 79.55% (35 of 44) |
+| payment coverage | **57.38%** (2,892 of 5,040) | 56.05% (2,825 of 5,040) |
+| R0 / R1 split | 32 / 5 credits | 24 / 11 credits |
+| drift absorbed | ₹1.55 over 4 matches | ₹1.33 over 5 matches |
+| identity residue | ₹1,06,154.57 | ₹1,25,688.25 |
+
+**Quote payment coverage, not the auto-match rate.** 80.43% of credits are matched but only
+57.38% of payments sit inside a matched credit, because the unmatched credits are the
+bundled ones and a bundle carries 2–5 settlements' worth of payments. That is the number R2
+has to move, and the honest one to put in `EVAL.md`.
+
+**The R0/R1 split is noise at ±2 credits.** R0 is 69.57% held-out against 52.17% train on an
+identical UTR knob; the difference is 6 bundled credits versus 8. Do not read PRD §5's target
+table as a scoreboard.
 
 ### Decisions made in conversation that ARE now in PRD.md
 
@@ -82,8 +98,12 @@ one-pass-then-load-nothing ingest rule.
 
 - **`make demo` does not exist** (step 13). Neither does `README.md` quickstart, `EVAL.md`,
   or `ARCHITECTURE.md`. `README.md` in the repo is the original stub.
-- **`data/` and `eval/ground_truth/` are committed-by-default and not gitignored.** Decide
-  whether generated data belongs in git before the first commit.
+- **Resolved: `data/` and `eval/ground_truth/` are tracked in git** (~3MB). Regenerable from
+  seed, but tracked means a clone reproduces the numbers without running the generator.
+- **`.gitignore` carries `*.md` with `!README.md`, so `PRD.md`, `CLAUDE.md` and `PROMPTS.md`
+  are on disk but NOT in the repo** (commit `a3857bf`). They still load for a local session.
+  But acceptance criterion 10 is "a stranger can clone the repo and see the close summary" —
+  a stranger currently clones without the spec. Decide before step 13 whether `PRD.md` ships.
 - **Typer is not installed or used.** Both CLIs are `python -m` with `sys.argv`. Add Typer
   when there is a third command.
 - **Persistence for review decisions is unchosen** (PRD §9.3, step 12). It must survive a
@@ -97,6 +117,26 @@ one-pass-then-load-nothing ingest rule.
   output" cannot hold literally for R3, and remembered review decisions change the next run
   by design. Needs restating before step 9.
 - **The `unprocessed` state is defined but nothing produces it yet.**
+- **`in_transit_paise` is borrowed from the answer key by `eval/harness.py`.** It is the one
+  total in PRD §8's identity that is not derivable from the CSVs, because deriving it needs a
+  period boundary the engine does not have until step 7. The harness is allowed to read the
+  answer key — that is its job — but it means the `unexplained` figure is not yet a number the
+  engine could produce on a real merchant's files. Retire the borrow at step 7.
+- **The identity residue (₹1,06,154.57 held-out) is reported, not asserted to zero.** It is
+  the injected damage: `world.assert_identity` runs on the *clean* world before
+  `breaks.injure`, and breaks are money that no longer ties by definition. Attributing it
+  code by code is step 7's completeness test. The half that IS asserted every run: the six
+  CSV-derivable totals reproduce the answer key to the paisa.
+- **p50/p95 latency is deliberately absent from `results.json`.** The whole run is 0–1ms with
+  no per-unit distribution; two identical percentiles of a one-sample population is a metric
+  shaped like a measurement. It lands at step 9 with R3's per-call latency. `run_ms` is the
+  one field that is not reproducible, and the reproducibility test excludes it.
+- **Ingest matches CSV headers by exact string, so a whitespace-padded header rejects the
+  whole file.** An editor column-aligned `data/heldout/bank_statement.csv` on 2026-08-29 and
+  ingest refused all 46 rows with `bank_statement.csv has no txn_date or narration or ...`.
+  Every *value* is stripped; the *fieldnames* are not. Restored from git, held-out reproduced
+  80.43% exactly. The loud failure worked as designed, but a padded header is readable data
+  and arguably should not be a rejection — one line in `_read`, not yet taken.
 
 ---
 
