@@ -23,7 +23,7 @@ from match.ladder import run
 from money import Paise, format_rupees
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNGS = "R0+R1"      # bumped as rungs land; results.json is keyed by this
+RUNGS = "R0+R1+R2"   # bumped as rungs land; results.json is keyed by this
 
 
 def bps(part: int, whole: int) -> int:
@@ -97,8 +97,22 @@ def check_partition(ledger, result) -> None:
 
 
 def score(ledger, result, truth: dict, run_ms: int, residue: int) -> dict:
+    """PRD 8: an `ambiguous` credit is scored as a refusal, not as a match.
+
+    Two or more subsets of settlements tie to it exactly, so the correct behaviour is E14
+    listing every candidate. A claim on one counts as a false match **even when the payment
+    set matches `true_subset`** -- the engine had no evidence to justify choosing it and
+    would have been wrong as often as not on data the generator did not label. Guessing
+    correctly is not knowing, and a scorer that rewarded the guess would teach the solver to
+    guess. So an ambiguous credit is out of the recall denominator and a claim on it lands
+    in the precision denominator without ever reaching the numerator.
+    """
+    refuse = {a["bank_ref"] for a in truth["ambiguous"]}
     key = {m["bank_ref"]: set(m["payment_ids"]) for m in truth["matches"]}
-    correct = [m for m in result.matches if key.get(m.bank_ref) == set(m.payment_ids)]
+    expected = [m for m in truth["matches"] if m["bank_ref"] not in refuse]
+    correct = [m for m in result.matches
+               if m.bank_ref not in refuse and key.get(m.bank_ref) == set(m.payment_ids)]
+    bundled = sum(1 for m in truth["matches"] if len(m["settlement_ids"]) > 1)
 
     credit = {b["bank_ref"]: b["credit_paise"] for b in ledger.bank}
     net = {s["settlement_id"]: s["net_amount_paise"] for s in ledger.settlements}
@@ -114,9 +128,13 @@ def score(ledger, result, truth: dict, run_ms: int, residue: int) -> dict:
         "settlements_unmatched": len(result.unmatched_settlements),
         "matches_claimed": len(result.matches),
         "matches_correct": len(correct),
-        "matches_expected": len(truth["matches"]),
+        "matches_expected": len(expected),
+        "ambiguous_total": len(refuse),
+        "ambiguous_claimed": sum(1 for m in result.matches if m.bank_ref in refuse),
+        "bundled_credits": bundled,
+        "ambiguity_rate_bps": bps(len(refuse), bundled),
         "precision_bps": bps(len(correct), len(result.matches)),
-        "recall_bps": bps(len(correct), len(truth["matches"])),
+        "recall_bps": bps(len(correct), len(expected)),
         "match_rate_bps": bps(len(result.matches), len(ledger.bank)),
         "rung_attribution": result.by_rung(),
         "payments_total": len(ledger.payments),
@@ -143,6 +161,11 @@ def report(name: str, m: dict) -> None:
           f"{m['matches_correct']} of {m['matches_expected']} real matches")
     print(f"  payments covered    {show_bps(m['payment_coverage_bps']):>9}   "
           f"{m['payments_covered']} of {m['payments_total']}")
+    print(f"  ambiguity rate      {show_bps(m['ambiguity_rate_bps']):>9}   "
+          f"{m['ambiguous_total']} of {m['bundled_credits']} bundled credits have a rival subset")
+    if m["ambiguous_claimed"]:
+        print(f"  ** {m['ambiguous_claimed']} match(es) claimed on an ambiguous credit -- "
+              f"a guess, scored as false **")
     print("\n  -- how it was matched --")
     for rung, count in m["rung_attribution"].items():
         print(f"  {rung}  {count:5d} credits   "
@@ -168,7 +191,7 @@ def evaluate(name: str) -> dict:
         ROOT.joinpath("eval", "ground_truth", f"{name}.json").read_text(encoding="utf-8"))
 
     started = time.monotonic_ns()
-    result = run(ledger)
+    result = run(ledger, through=RUNGS.rsplit("+", 1)[-1])
     run_ms = (time.monotonic_ns() - started) // 1000000
 
     residue = check_conservation(ledger, truth)

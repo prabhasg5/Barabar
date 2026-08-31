@@ -40,8 +40,8 @@ def ledger(credits=((("HDFC1"), 1000),), settlements=(("setl_1", 1000),), paymen
     )
 
 
-def truth_of(matches, totals=None):
-    return {"seed": 1, "matches": matches,
+def truth_of(matches, totals=None, ambiguous=()):
+    return {"seed": 1, "matches": matches, "ambiguous": list(ambiguous),
             "totals": totals or {"gross_paise": 0, "fee_paise": 0, "gst_paise": 0,
                                  "refund_paise": 0, "adjustment_paise": 0,
                                  "credit_paise": 0, "in_transit_paise": 0}}

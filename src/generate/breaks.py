@@ -50,6 +50,18 @@ def _sample(rng: Random, pop: list, bps: int) -> list:
     return rng.sample(pop, min(len(pop), max(1, len(pop) * bps // 10_000)))
 
 
+def _unprotected(w: World, rows: list[dict], key: str) -> list[dict]:
+    """Drop the records `world._decoys` engineered an exact tie across.
+
+    A break that shifts a settlement inside a decoy's subset -- or drifts the credit both
+    subsets tie to -- moves one side of that equality and deletes an E14 with no trace. The
+    E14 population is two or three rows, so one silent loss is a third of it. Only the
+    money-moving breaks filter; E06-E09 and E13 move nothing and are left alone.
+    """
+    guard = w.protected_refs if key == "bank_ref" else w.protected_settlements
+    return [r for r in rows if r[key] not in guard]
+
+
 def injure(w: World, rng: Random) -> list[dict]:
     breaks: list[dict] = list(w.labels)
     for fn in (_fee_variance, _duplicate_payment, _partial_refund, _missing_settlement,
@@ -79,7 +91,7 @@ def _shift(w: World, sid: str, delta: int) -> int:
 def _fee_variance(w: World, rng: Random) -> list[dict]:
     """E05. Both directions -- an aggregator that undercharges is still off contract."""
     out = []
-    for p in _sample(rng, w.payments, FEE_VARIANCE_BPS):
+    for p in _sample(rng, _unprotected(w, w.payments, "settlement_id"), FEE_VARIANCE_BPS):
         sign = -1 if chance(rng, 4000) else 1
         drift = sign * rng.randrange(50, 800)
         old_fee, old_gst = p["fee_paise"], p["gst_paise"]
@@ -98,7 +110,7 @@ def _fee_variance(w: World, rng: Random) -> list[dict]:
 def _duplicate_payment(w: World, rng: Random) -> list[dict]:
     """E10. The same order captured twice -- the merchant is paid twice and owes a refund."""
     out = []
-    for p in _sample(rng, list(w.payments), DUPLICATE_PAYMENT_BPS):
+    for p in _sample(rng, _unprotected(w, w.payments, "settlement_id"), DUPLICATE_PAYMENT_BPS):
         dup = dict(p)
         dup["payment_id"] = p["payment_id"][:4] + "".join(rng.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=14))
         w.payments.append(dup)
@@ -117,7 +129,7 @@ def _duplicate_payment(w: World, rng: Random) -> list[dict]:
 def _partial_refund(w: World, rng: Random) -> list[dict]:
     """E11. A refund settles for less than it was raised for and the remainder drifts."""
     out = []
-    linked = [r for r in w.refunds if r["settlement_id"]]
+    linked = _unprotected(w, [r for r in w.refunds if r["settlement_id"]], "settlement_id")
     for r in _sample(rng, linked, PARTIAL_REFUND_BPS):
         old = r["amount_paise"]
         r["amount_paise"] = old * rng.randrange(30, 85) // 100
@@ -175,7 +187,7 @@ def _unparseable_narration(w: World, rng: Random) -> list[dict]:
 def _rounding_drift(w: World, rng: Random) -> list[dict]:
     """E03 inside tolerance, E04 outside it. The line between them is 100 paise, exactly."""
     out = []
-    pool = [r for r in w.bank if r["credit_paise"]]
+    pool = _unprotected(w, [r for r in w.bank if r["credit_paise"]], "bank_ref")
     within = _sample(rng, pool, DRIFT_WITHIN_BPS)
     rest = [r for r in pool if r not in within]  # no row drifts twice
     for row, code in ([(r, "E03") for r in within]
