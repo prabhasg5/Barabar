@@ -40,11 +40,103 @@
       "ambiguous_claimed": 0,
       "ambiguous_total": 1,
       "bundled_credits": 6,
+      "coverage_split": {
+        "by_code": {
+          "E02": 108,
+          "E12": 229,
+          "E14": 231
+        },
+        "in_transit": 229,
+        "in_transit_bps": 455,
+        "payments_total": 5038,
+        "reconciled": 4470,
+        "reconciled_bps": 8873,
+        "still_open": 339,
+        "still_open_bps": 673
+      },
       "credits_matched": 43,
       "credits_total": 46,
       "credits_unmatched": 3,
       "drift_matches": 5,
       "drift_paise": 283,
+      "exceptions": {
+        "codes_scored": [
+          "E01",
+          "E02",
+          "E03",
+          "E04",
+          "E05",
+          "E06",
+          "E07",
+          "E08",
+          "E09",
+          "E10",
+          "E12",
+          "E13",
+          "E14"
+        ],
+        "confused": {
+          "E05": {
+            "E10": 1
+          }
+        },
+        "correct": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E05": 50,
+          "E06": 15,
+          "E07": 15,
+          "E08": 3,
+          "E09": 3,
+          "E10": 36,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "not_raised": [
+          "E11"
+        ],
+        "predicted": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E05": 51,
+          "E06": 15,
+          "E07": 15,
+          "E08": 3,
+          "E09": 3,
+          "E10": 36,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "support": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 68,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 3,
+          "E10": 36,
+          "E11": 35,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "unclassified": 0
+      },
+      "fees": {
+        "net_paise": 11443,
+        "overcharged_count": 37,
+        "overcharged_paise": 17709,
+        "payments": 51,
+        "undercharged_count": 14,
+        "undercharged_paise": -6266
+      },
       "match_rate_bps": 9348,
       "matches_claimed": 43,
       "matches_correct": 43,
@@ -56,15 +148,180 @@
       "payments_covered": 4470,
       "payments_total": 5038,
       "precision_bps": 10000,
+      "precision_one_wrong_bps": 9767,
       "recall_bps": 10000,
       "reconciled_paise": 620104522,
+      "refund_fee_burden": {
+        "fee_paise": 214967,
+        "gst_paise": 38692,
+        "refunds_joined": 179,
+        "refunds_unlinked": 6,
+        "total_paise": 253659
+      },
       "run_ms": 0,
       "rung_attribution": {
         "R0": 32,
         "R1": 6,
-        "R2": 5
+        "R2": 5,
+        "R3": 0
       },
       "rungs": "R0+R1+R2",
+      "seed": 20260331,
+      "settlements_total": 64,
+      "settlements_unmatched": 6,
+      "unexplained_paise": 12813682
+    },
+    "R0+R1+R2+R3": {
+      "ambiguity_rate_bps": 1667,
+      "ambiguous_claimed": 0,
+      "ambiguous_total": 1,
+      "bundled_credits": 6,
+      "completion_tokens": 255,
+      "confidences": [
+        {
+          "accepted": false,
+          "bank_ref": "HDFC882328503",
+          "code": "E01",
+          "confidence": 95
+        },
+        {
+          "accepted": false,
+          "bank_ref": "HDFC845765361",
+          "code": "E01",
+          "confidence": 95
+        }
+      ],
+      "coverage_split": {
+        "by_code": {
+          "E02": 108,
+          "E12": 229,
+          "E14": 231
+        },
+        "in_transit": 229,
+        "in_transit_bps": 455,
+        "payments_total": 5038,
+        "reconciled": 4470,
+        "reconciled_bps": 8873,
+        "still_open": 339,
+        "still_open_bps": 673
+      },
+      "credits_matched": 43,
+      "credits_total": 46,
+      "credits_unmatched": 3,
+      "drift_matches": 5,
+      "drift_paise": 283,
+      "exceptions": {
+        "codes_scored": [
+          "E01",
+          "E02",
+          "E03",
+          "E04",
+          "E05",
+          "E06",
+          "E07",
+          "E08",
+          "E09",
+          "E10",
+          "E12",
+          "E13",
+          "E14"
+        ],
+        "confused": {
+          "E05": {
+            "E10": 1
+          }
+        },
+        "correct": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E05": 50,
+          "E06": 15,
+          "E07": 15,
+          "E08": 3,
+          "E09": 3,
+          "E10": 36,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "not_raised": [
+          "E11"
+        ],
+        "predicted": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E05": 51,
+          "E06": 15,
+          "E07": 15,
+          "E08": 3,
+          "E09": 3,
+          "E10": 36,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "support": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 68,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 3,
+          "E10": 36,
+          "E11": 35,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "unclassified": 0
+      },
+      "fees": {
+        "net_paise": 11443,
+        "overcharged_count": 37,
+        "overcharged_paise": 17709,
+        "payments": 51,
+        "undercharged_count": 14,
+        "undercharged_paise": -6266
+      },
+      "match_rate_bps": 9348,
+      "matches_claimed": 43,
+      "matches_correct": 43,
+      "matches_expected": 43,
+      "model_cost_paise": 0,
+      "open_credit_paise": 29249402,
+      "open_settlement_paise": 76260810,
+      "payment_coverage_bps": 8873,
+      "payments_covered": 4470,
+      "payments_total": 5038,
+      "precision_bps": 10000,
+      "precision_one_wrong_bps": 9767,
+      "prompt_tokens": 1578,
+      "proposals": 2,
+      "proposals_accepted": 0,
+      "proposals_rejected": 0,
+      "provider": "gemini",
+      "recall_bps": 10000,
+      "reconciled_paise": 620104522,
+      "refund_fee_burden": {
+        "fee_paise": 214967,
+        "gst_paise": 38692,
+        "refunds_joined": 179,
+        "refunds_unlinked": 6,
+        "total_paise": 253659
+      },
+      "run_ms": 1,
+      "rung_attribution": {
+        "R0": 32,
+        "R1": 6,
+        "R2": 5,
+        "R3": 0
+      },
+      "rungs": "R0+R1+R2+R3",
       "seed": 20260331,
       "settlements_total": 64,
       "settlements_unmatched": 6,
@@ -112,11 +369,106 @@
       "ambiguous_claimed": 0,
       "ambiguous_total": 1,
       "bundled_credits": 8,
+      "coverage_split": {
+        "by_code": {
+          "E02": 292,
+          "E04": 52,
+          "E12": 203,
+          "E14": 110
+        },
+        "in_transit": 203,
+        "in_transit_bps": 403,
+        "payments_total": 5042,
+        "reconciled": 4385,
+        "reconciled_bps": 8697,
+        "still_open": 454,
+        "still_open_bps": 900
+      },
       "credits_matched": 42,
       "credits_total": 46,
       "credits_unmatched": 4,
       "drift_matches": 5,
       "drift_paise": 152,
+      "exceptions": {
+        "codes_scored": [
+          "E01",
+          "E02",
+          "E03",
+          "E04",
+          "E05",
+          "E06",
+          "E07",
+          "E08",
+          "E09",
+          "E10",
+          "E12",
+          "E13",
+          "E14"
+        ],
+        "confused": {
+          "E05": {
+            "E10": 2
+          }
+        },
+        "correct": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 56,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 1,
+          "E10": 38,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "not_raised": [
+          "E11"
+        ],
+        "predicted": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 58,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 1,
+          "E10": 38,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "support": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 71,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 1,
+          "E10": 38,
+          "E11": 33,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "unclassified": 0
+      },
+      "fees": {
+        "net_paise": 11241,
+        "overcharged_count": 40,
+        "overcharged_paise": 19518,
+        "payments": 58,
+        "undercharged_count": 18,
+        "undercharged_paise": -8277
+      },
       "match_rate_bps": 9130,
       "matches_claimed": 42,
       "matches_correct": 42,
@@ -128,15 +480,174 @@
       "payments_covered": 4385,
       "payments_total": 5042,
       "precision_bps": 10000,
+      "precision_one_wrong_bps": 9762,
       "recall_bps": 9767,
       "reconciled_paise": 636921792,
-      "run_ms": 0,
+      "refund_fee_burden": {
+        "fee_paise": 198937,
+        "gst_paise": 35811,
+        "refunds_joined": 172,
+        "refunds_unlinked": 4,
+        "total_paise": 234748
+      },
+      "run_ms": 1,
       "rung_attribution": {
         "R0": 23,
         "R1": 12,
-        "R2": 7
+        "R2": 7,
+        "R3": 0
       },
       "rungs": "R0+R1+R2",
+      "seed": 20260101,
+      "settlements_total": 64,
+      "settlements_unmatched": 7,
+      "unexplained_paise": 42596519
+    },
+    "R0+R1+R2+R3": {
+      "ambiguity_rate_bps": 1250,
+      "ambiguous_claimed": 0,
+      "ambiguous_total": 1,
+      "bundled_credits": 8,
+      "completion_tokens": 365,
+      "confidences": [
+        {
+          "accepted": false,
+          "bank_ref": "HDFC555837103",
+          "code": "E04",
+          "confidence": 100
+        },
+        {
+          "accepted": false,
+          "bank_ref": "HDFC695040510",
+          "code": "E01",
+          "confidence": 95
+        },
+        {
+          "accepted": false,
+          "bank_ref": "HDFC417023869",
+          "code": "E01",
+          "confidence": 95
+        }
+      ],
+      "credits_matched": 42,
+      "credits_total": 46,
+      "credits_unmatched": 4,
+      "drift_matches": 5,
+      "drift_paise": 152,
+      "exceptions": {
+        "codes_scored": [
+          "E01",
+          "E02",
+          "E03",
+          "E04",
+          "E05",
+          "E06",
+          "E07",
+          "E08",
+          "E09",
+          "E10",
+          "E12",
+          "E13",
+          "E14"
+        ],
+        "confused": {
+          "E05": {
+            "E10": 2
+          }
+        },
+        "correct": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 56,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 1,
+          "E10": 38,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "not_raised": [
+          "E11"
+        ],
+        "predicted": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 58,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 1,
+          "E10": 38,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "support": {
+          "E01": 2,
+          "E02": 2,
+          "E03": 5,
+          "E04": 1,
+          "E05": 71,
+          "E06": 15,
+          "E07": 16,
+          "E08": 3,
+          "E09": 1,
+          "E10": 38,
+          "E11": 33,
+          "E12": 2,
+          "E13": 3,
+          "E14": 1
+        },
+        "unclassified": 0
+      },
+      "fees": {
+        "net_paise": 11241,
+        "overcharged_count": 40,
+        "overcharged_paise": 19518,
+        "payments": 58,
+        "undercharged_count": 18,
+        "undercharged_paise": -8277
+      },
+      "match_rate_bps": 9130,
+      "matches_claimed": 42,
+      "matches_correct": 42,
+      "matches_expected": 43,
+      "model_cost_paise": 0,
+      "open_credit_paise": 24187620,
+      "open_settlement_paise": 97552923,
+      "payment_coverage_bps": 8697,
+      "payments_covered": 4385,
+      "payments_total": 5042,
+      "precision_bps": 10000,
+      "precision_one_wrong_bps": 9762,
+      "prompt_tokens": 2697,
+      "proposals": 3,
+      "proposals_accepted": 0,
+      "proposals_rejected": 0,
+      "provider": "gemini",
+      "recall_bps": 9767,
+      "reconciled_paise": 636921792,
+      "refund_fee_burden": {
+        "fee_paise": 198937,
+        "gst_paise": 35811,
+        "refunds_joined": 172,
+        "refunds_unlinked": 4,
+        "total_paise": 234748
+      },
+      "run_ms": 1,
+      "rung_attribution": {
+        "R0": 23,
+        "R1": 12,
+        "R2": 7,
+        "R3": 0
+      },
+      "rungs": "R0+R1+R2+R3",
       "seed": 20260101,
       "settlements_total": 64,
       "settlements_unmatched": 7,

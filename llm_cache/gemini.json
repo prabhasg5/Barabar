@@ -1,0 +1,77 @@
+{
+  "003dd5ead025033b567f56ff4697ffea5f1728d0dca195c0022b6bf1c3f5b095": {
+    "bank_ref": "HDFC882328503",
+    "code": "E01",
+    "completion_tokens": 140,
+    "confidence": 95,
+    "explanation": "This credit of INR 6,211.85 cannot be reconciled because there are no open settlements in the system, and the narration 'CR-TRF-000000000000-B2B' contains no processor information or usable reference. This appears to be a direct B2B bank transfer rather than a payment gateway settlement. You should check your B2B sales ledger or virtual account reports for this date to identify the customer who made this payment.",
+    "prompt_tokens": 767,
+    "settlement_ids": []
+  },
+  "12cf52a7523bb22f0d4173dc46306099010f9f7b6f158a4c43fdd0107a7adb0f": {
+    "bank_ref": "HDFC695040510",
+    "code": "E01",
+    "completion_tokens": 130,
+    "confidence": 95,
+    "explanation": "This credit of 485,294 paise from account 50100XXXXXXXX cannot be matched to any open settlements, as the only open settlement is for a much larger amount (7,457,224 paise) and the narration does not reference a payment processor. This appears to be an unidentified direct transfer or internal receipt. Please check internal bank transfer logs or contact the treasury team to identify the source of this deposit.",
+    "prompt_tokens": 812,
+    "settlement_ids": []
+  },
+  "1e6b8f601ec33dc0c56d0ee81137b710ef51b67b4476581ae1a1cfacd4e7df91": {
+    "bank_ref": "HDFC555837103",
+    "code": "E04",
+    "completion_tokens": 100,
+    "confidence": 100,
+    "explanation": "The bank credit narration matches the UTR of settlement setl_s4l1ku1vti53ru, but the credited amount is short by 35,781 paise. Contact Razorpay support to obtain the breakdown of deductions, reserves, or adjustments applied to this settlement batch.",
+    "prompt_tokens": 839,
+    "settlement_ids": []
+  },
+  "2c806b6b6f9627362c97befcf34c073d1c5a7823ee0a805de7757233a49f8bb3": {
+    "bank_ref": "HDFC258778820",
+    "code": "MATCH",
+    "completion_tokens": 122,
+    "confidence": 100,
+    "explanation": "This credit represents a bundled payout from Razorpay combining two separate settlements from February 20th and February 23rd. The sum of these two open settlements matches the credit amount exactly. You can safely clear both settlements against this bank entry.",
+    "prompt_tokens": 872,
+    "settlement_ids": [
+      "setl_57dkr8we1ld4hf",
+      "setl_marwnoou4khb0k"
+    ]
+  },
+  "8612029bcfd31738b01a84a0dadee01c8d4be55f07f8cea4edf5c9846a71aca5": {
+    "bank_ref": "HDFC695040510",
+    "code": "E01",
+    "completion_tokens": 131,
+    "confidence": 95,
+    "explanation": "This credit of 485,294 paise is an unidentified receipt that does not originate from a payment processor. The narration indicates a direct transfer from account '50100XXXXXXXX', and the amount is far too small to match any of our open gateway settlements, which are all over 6,600,000 paise. You should review your internal bank transfer logs or direct customer deposit records to identify the source of this transfer.",
+    "prompt_tokens": 923,
+    "settlement_ids": []
+  },
+  "8e75aa2473b800e440302776b891d14d70893df79d3bcb444b0b0c3d609f86bf": {
+    "bank_ref": "HDFC417023869",
+    "code": "E01",
+    "completion_tokens": 104,
+    "confidence": 95,
+    "explanation": "This credit represents an unidentified receipt. The bank narration contains only a generic B2B transfer label with no processor name or usable reference, and there are no open settlements that match or sum to this amount. You should contact the bank to identify the remitter of this B2B transfer or check internal sales channels for an offline payment.",
+    "prompt_tokens": 824,
+    "settlement_ids": []
+  },
+  "e2f9f93764b06a140e15c55ae438398b268a8683dad79b26817ee87f86d22b55": {
+    "bank_ref": "HDFC417023869",
+    "code": "E01",
+    "completion_tokens": 134,
+    "confidence": 95,
+    "explanation": "This credit of 5,051.32 INR cannot be matched to any open settlements, as all available settlements are for significantly larger amounts. The bank narration 'CR-TRF-000000000000-B2B' is generic, lacks a payment processor name, and contains no usable reference number. This is an unidentified receipt; please check internal B2B sales invoices or contact the bank to identify the depositor.",
+    "prompt_tokens": 935,
+    "settlement_ids": []
+  },
+  "f0f11a7bb90fc8432e475f1b25b209463ecfa8643fe59a58fbb9479f33be31dc": {
+    "bank_ref": "HDFC845765361",
+    "code": "E01",
+    "completion_tokens": 115,
+    "confidence": 95,
+    "explanation": "An unidentified credit arrived via NEFT, but the narration contains only a generic settlement tag without naming the payment processor or providing a usable reference. Since the only open settlement in the system is for a vastly larger amount, this receipt cannot be matched. Please contact the bank to obtain the remitter details or pull the processor's settlement reports for this date to identify the source of these funds.",
+    "prompt_tokens": 811,
+    "settlement_ids": []
+  }
+}

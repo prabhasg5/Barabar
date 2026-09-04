@@ -63,6 +63,10 @@ class Result:
     unmatched_settlements: list[str] = field(default_factory=list)
     ambiguous: list[Ambiguity] = field(default_factory=list)
     trail: dict[str, list[str]] = field(default_factory=dict)
+    # Every proposal R3 made, and the subset the validator refused. Kept rather than dropped:
+    # "the model proposed and deterministic code said no" is the evidence for the safety rule.
+    proposals: list = field(default_factory=list)
+    rejected: list = field(default_factory=list)
 
     @property
     def drift_paise(self) -> Paise:
@@ -75,7 +79,7 @@ class Result:
         return [m for m in self.matches if m.delta_paise]
 
     def by_rung(self) -> dict[str, int]:
-        counts = {"R0": 0, "R1": 0, "R2": 0}
+        counts = {"R0": 0, "R1": 0, "R2": 0, "R3": 0}
         for m in self.matches:
             counts[m.rung] = counts.get(m.rung, 0) + 1
         return counts
@@ -389,17 +393,109 @@ def r2(credits: list[dict], idx: Index, result: Result) -> list[dict]:
     return rest
 
 
-def run(ledger: Ledger, through: str = "R2") -> Result:
+def r3(credits: list[dict], idx: Index, result: Result, propose) -> list[dict]:
+    """The LLM rung. **The model proposes; this function disposes.**
+
+    `propose(credit, candidates) -> Proposal` is injected so the ladder never imports a
+    provider and the test suite can pass a hand-built proposal in. Everything the model
+    returns is a *candidate*: it names settlement ids, and the arithmetic is done here.
+
+    **There is no confidence threshold, and that is deliberate.** The check below is binary and
+    exact -- the named settlements sum to the credit to the paisa, or they do not. A proposal
+    that ties is correct at a stated confidence of 5; one that does not is wrong at 99. A
+    threshold could only discard proposals *before* validating them, and validating costs a
+    subtraction. Confidence is recorded so the run can report whether it tracks being right,
+    which is a measurement rather than a control.
+
+    Proposals that do not tie are kept on `result.rejected` rather than dropped, because "the
+    model proposed and the validator refused" is the evidence for the safety rule and PRD 12
+    wants it in the trail.
+    """
+    rest: list[dict] = []
+    refused = {a.bank_ref for a in result.ambiguous}
+    for credit in credits:
+        note = result.trail[credit["bank_ref"]]
+        # A credit R2 raised E14 on is never offered to the model. PRD 6 defines E14 as the
+        # evidence failing to single out an answer, and PRD 8 scores a claim on one as a false
+        # match *even when it equals the true subset* -- guessing correctly is not knowing.
+        #
+        # This is not belt-and-braces over the uniqueness check below; it is the guard that
+        # actually holds. By the time R3 runs, R2 has claimed the rival subset's members
+        # against their own bundled credits, so only one subset is still open and re-running
+        # the enumeration here finds a single tie. The ambiguity is real but has dissolved a
+        # rung later -- the same "a rival must survive the ladder" effect as the decoys, one
+        # rung further on. Uniqueness at R3 time therefore cannot see it, and only R2's
+        # refusal can.
+        if credit["bank_ref"] in refused:
+            note.append("R3: not offered to the model -- R2 raised E14 on this credit and a "
+                        "refusal is the answer. Picking one arm would be a guess.")
+            rest.append(credit)
+            continue
+        candidates = [s for s in idx.open_settlements()
+                      if _within(credit, s["settled_at"], R2_WINDOW_DAYS)]
+        proposal = propose(credit, candidates)
+        result.proposals.append(proposal)
+
+        if proposal.code != "MATCH" or not proposal.settlement_ids:
+            note.append(f"R3: the model returned {proposal.code} and proposed no match "
+                        f"(confidence {proposal.confidence}).")
+            rest.append(credit)
+            continue
+
+        named = [s for s in candidates if s["settlement_id"] in set(proposal.settlement_ids)]
+        total = sum(s["net_amount_paise"] for s in named)
+        missing = set(proposal.settlement_ids) - {s["settlement_id"] for s in named}
+        # Tying is necessary and NOT sufficient. R2 refuses a credit that two subsets tie to,
+        # and a proposal that ties is not evidence the model found the only one -- on the
+        # first live run the model proposed one arm of a known E14 at confidence 100 and an
+        # earlier version of this validator accepted it, walking straight around acceptance
+        # criterion 8. Uniqueness is re-checked here, by the same enumeration R2 uses, so no
+        # rung can claim an ambiguous credit however it arrived at the answer.
+        ties = _exact_subsets(candidates, credit["credit_paise"]) if named else []
+        if missing or total != credit["credit_paise"] or len(ties) > 1:
+            result.rejected.append(proposal)
+            why = (f"named {len(missing)} settlement(s) that are not open"
+                   if missing else
+                   f"the named settlements sum to {total}, not {credit['credit_paise']}"
+                   if total != credit["credit_paise"] else
+                   f"{len(ties)} different subsets tie to this credit exactly, so no proposal "
+                   f"can be evidence for one of them -- E14 stands")
+            note.append(f"R3: the model proposed a match at confidence "
+                        f"{proposal.confidence} and the validator rejected it -- {why}. "
+                        f"Confidence does not enter this decision.")
+            rest.append(credit)
+            continue
+
+        result.matches.append(Match(
+            bank_ref=credit["bank_ref"],
+            settlement_ids=tuple(sorted(s["settlement_id"] for s in named)),
+            payment_ids=tuple(sorted(pid for s in named
+                                     for pid in idx.payments_of.get(s["settlement_id"], []))),
+            rung="R3", delta_paise=Paise(0)))
+        for s in named:
+            idx.claimed.add(s["settlement_id"])
+        note.append(f"R3: the model proposed these settlements and the validator confirmed "
+                    f"they tie to the paisa.")
+    return rest
+
+
+def run(ledger: Ledger, through: str = "R2", propose=None) -> Result:
     """Walk the ladder. Deterministic: same ledger in, same result out.
 
     `through` stops early, which is how the before/after numbers acceptance criterion 10
-    wants are reproduced from the same code rather than from a remembered figure.
+    wants are reproduced from the same code rather than from a remembered figure. R3 runs only
+    when a proposer is supplied, so the deterministic rungs never depend on a model being
+    reachable.
     """
     idx = index(ledger)
     result = Result()
     left = r1(r0(ledger, idx, result), idx, result)
-    if through == "R2":
+    if through in ("R2", "R3"):
         left = r2(left, idx, result)
+    if through == "R3":
+        if propose is None:
+            raise ValueError("R3 needs a proposer; pass propose= or stop at R2")
+        left = r3(left, idx, result, propose)
     result.unmatched_credits = [c["bank_ref"] for c in left]
     result.unmatched_settlements = [s["settlement_id"] for s in idx.unclaimed()]
     return result
