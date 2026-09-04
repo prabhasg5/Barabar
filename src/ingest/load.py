@@ -129,6 +129,89 @@ ATTRS = {
 }
 
 
+# What identifies each file, for the "matched on" evidence the detection table prints.
+# A required column that no other schema also requires is what actually discriminates;
+# the shared ones (status, settlement_id) prove nothing on their own.
+DISCRIMINATORS = {
+    name: tuple(sorted(set(schema) - set().union(
+        *(set(other) for other_name, other in SCHEMAS.items() if other_name != name))))
+    for name, schema in SCHEMAS.items()
+}
+
+
+@dataclass(frozen=True)
+class Detected:
+    """One CSV, identified. `matched_on` is why -- the columns that named it."""
+    path: Path
+    schema: str
+    matched_on: tuple[str, ...]
+    rows: int
+
+
+@dataclass
+class Detection:
+    mapping: dict[str, Path]
+    found: list[Detected]
+    skipped: list[Path]
+    problems: list[str]
+    choices: dict[str, list[Detected]]   # schema -> rival files, for the CLI to ask about
+
+
+def _peek(path: Path) -> tuple[set[str], int]:
+    """Header columns (stripped) and the number of data rows. Header only, then a count."""
+    with path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.reader(fh)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return set(), 0
+        return {cell.strip() for cell in header}, sum(1 for _ in reader)
+
+
+def detect(folder: Path) -> Detection:
+    """Identify each CSV in `folder` by its header, not its name.
+
+    A merchant's exports are named whatever their aggregator named them, so the filename
+    carries no information the header does not. A file matches a schema when its columns
+    are a *superset* of that schema's required ones -- real exports carry extra columns.
+
+    Pure: it reads headers and counts rows, prints nothing and asks nothing. Everything
+    interactive lives in the CLI, so the harness and the tests can never block on a person.
+    """
+    found: list[Detected] = []
+    skipped: list[Path] = []
+    problems: list[str] = []
+    claims: dict[str, list[Detected]] = {}
+
+    for path in sorted(folder.glob("*.csv")):
+        header, rows = _peek(path)
+        fits = [name for name, schema in SCHEMAS.items() if set(schema) <= header]
+        if not fits:
+            skipped.append(path)
+            continue
+        if len(fits) > 1:
+            # One file satisfying two schemas is not a question a user can answer -- it
+            # means the required-column sets are too weak to tell the files apart, and any
+            # answer would be a guess at our schema definitions. Ours to fix, not theirs.
+            problems.append(
+                f"{path.name} satisfies {' and '.join(sorted(fits))}. Those signatures do "
+                f"not discriminate; a required-column set needs tightening.")
+            continue
+        hit = Detected(path, fits[0], DISCRIMINATORS[fits[0]][:3], rows)
+        found.append(hit)
+        claims.setdefault(fits[0], []).append(hit)
+
+    for name in SCHEMAS:
+        if name not in claims:
+            problems.append(
+                f"No file has the {ATTRS[name]} columns. Expected a CSV containing "
+                f"{', '.join(SCHEMAS[name])}.")
+
+    choices = {name: hits for name, hits in claims.items() if len(hits) > 1}
+    mapping = {name: hits[0].path for name, hits in claims.items() if len(hits) == 1}
+    return Detection(mapping, found, skipped, problems, choices)
+
+
 @dataclass
 class Ledger:
     orders: list[dict]
@@ -156,7 +239,12 @@ def _read(path: Path, schema: dict, key: str) -> tuple[list[dict], list[str]]:
 
     with path.open(newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
-        absent = [c for c in schema if c not in (reader.fieldnames or [])]
+        # Fieldnames are stripped, like every value is. Whitespace in a header is a
+        # formatting artefact of whatever wrote the file -- an editor column-aligning the
+        # columns, most likely -- and must never be the difference between a parsed row and
+        # a rejected one. A column that is genuinely absent still fails loudly below.
+        actual = {(name or "").strip(): name for name in (reader.fieldnames or [])}
+        absent = [c for c in schema if c not in actual]
         if absent:
             return rows, [f"{path.name} has no {' or '.join(absent)} column. "
                           f"Add it, then run again."]
@@ -165,7 +253,7 @@ def _read(path: Path, schema: dict, key: str) -> tuple[list[dict], list[str]]:
             row_no, row, ok = reader.line_num, {}, True
             for column, parse in schema.items():
                 try:
-                    row[column] = parse(raw.get(column) or "")
+                    row[column] = parse(raw.get(actual[column]) or "")
                 except ValueError as bad:
                     problems.append(_problem(row_no, path.name, column, str(bad)))
                     ok = False
@@ -180,11 +268,18 @@ def _read(path: Path, schema: dict, key: str) -> tuple[list[dict], list[str]]:
     return rows, problems
 
 
-def load(folder: Path) -> Ledger:
-    """Load all five files, or raise with every problem found across all of them."""
+def load(folder: Path, mapping: dict[str, Path] | None = None) -> Ledger:
+    """Load all five files, or raise with every problem found across all of them.
+
+    `mapping` is what `detect` returned: schema name -> the file that carries it. Without
+    it the filename convention is used, which is what detect finds anyway when the files
+    happen to be named conventionally. Keeping that fallback is what lets every existing
+    caller -- the harness, the match CLI, the tests -- go on passing a folder.
+    """
     loaded, problems = {}, []
     for filename, schema in SCHEMAS.items():
-        rows, found = _read(folder.joinpath(filename), schema, KEYS[filename])
+        path = (mapping or {}).get(filename) or folder.joinpath(filename)
+        rows, found = _read(path, schema, KEYS[filename])
         loaded[ATTRS[filename]] = rows
         problems.extend(found)
     if problems:

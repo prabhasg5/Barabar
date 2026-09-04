@@ -139,16 +139,19 @@ def test_two_credits_naming_one_settlement_give_no_match(tmp_path):
 
 
 def test_a_bundled_credit_falls_through_to_r2(tmp_path):
-    """Two batches in one credit: the narration names one, the amount ties to neither."""
+    """Two batches in one credit: the narration names one, the amount ties to neither.
+
+    Written at step 4, when it asserted no match at all. R2 exists now, so the assertion is
+    what it always meant -- R0 and R1 decline this credit and the rung below takes it.
+    """
     ledger = ledger_of(
         tmp_path,
         settlements=[("setl_1", "05-Jan-26", "111111111111", 81834),
                      ("setl_2", "05-Jan-26", "222222222222", 40000)],
         bank=[("05/01/2026", NEFT.format(utr="111111111111"), 121834, "HDFC1")],
     )
-    result = run(ledger)
-    assert result.matches == []
-    assert result.unmatched_credits == ["HDFC1"]
+    assert [m.rung for m in run(ledger).matches] == ["R2"]
+    assert [m.rung for m in run(ledger, through="R1").matches] == []
 
 
 def test_a_date_outside_the_window_is_not_matched_by_r1(tmp_path):
@@ -213,3 +216,115 @@ def test_train_dataset_matches_with_no_false_positives():
              if truth.get(m.bank_ref) != set(m.settlement_ids)]
     assert not wrong, f"{len(wrong)} false matches: {wrong[:5]}"
     assert len(result.matches) >= 30
+
+
+# --- R2: the combination solver -------------------------------------------------------
+# A bare narration: no UTR to recover, so R0 and R1 cannot claim any settlement and the
+# case reaches R2 the way a real bundled credit does.
+BARE = "NEFT-RAZORPAY SOFTWARE PRIVA-HDFC-XXXXX"
+
+
+def test_r2_matches_a_unique_exact_combination(tmp_path):
+    ledger = ledger_of(
+        tmp_path,
+        settlements=[("setl_1", "05-Jan-26", "111111111111", 40000),
+                     ("setl_2", "06-Jan-26", "222222222222", 60000)],
+        bank=[("06/01/2026", BARE, 100000, "HDFC1")],
+        payments=[("pay_1", "setl_1"), ("pay_2", "setl_2")],
+    )
+    result = run(ledger)
+    assert [m.rung for m in result.matches] == ["R2"]
+    assert set(result.matches[0].settlement_ids) == {"setl_1", "setl_2"}
+    assert set(result.matches[0].payment_ids) == {"pay_1", "pay_2"}
+    assert result.matches[0].delta_paise == 0
+    assert result.ambiguous == []
+
+
+def test_r2_refuses_when_two_subsets_tie_exactly(tmp_path):
+    """Acceptance criterion 8, hand-built: 40000+60000 and 35000+65000 both make 100000.
+
+    The precision guard for the whole rung. Picking either would be a coin flip dressed as
+    a match, and a false match hides a real break.
+    """
+    ledger = ledger_of(
+        tmp_path,
+        settlements=[("setl_1", "05-Jan-26", "111111111111", 40000),
+                     ("setl_2", "06-Jan-26", "222222222222", 60000),
+                     ("setl_3", "05-Jan-26", "333333333333", 35000),
+                     ("setl_4", "06-Jan-26", "444444444444", 65000)],
+        bank=[("06/01/2026", BARE, 100000, "HDFC1")],
+    )
+    result = run(ledger)
+    assert result.matches == []
+    assert result.unmatched_credits == ["HDFC1"]
+    assert len(result.ambiguous) == 1
+    found = {frozenset(c) for c in result.ambiguous[0].candidates}
+    assert frozenset({"setl_1", "setl_2"}) in found
+    assert frozenset({"setl_3", "setl_4"}) in found
+    assert "E14" in " ".join(result.trail["HDFC1"])
+
+
+def test_r2_spends_no_tolerance(tmp_path):
+    """A bundle a rupee out is an exception, not a match. R0 and R1 would have taken this."""
+    ledger = ledger_of(
+        tmp_path,
+        settlements=[("setl_1", "05-Jan-26", "111111111111", 40000),
+                     ("setl_2", "06-Jan-26", "222222222222", 60000)],
+        bank=[("06/01/2026", BARE, 100000 - TOLERANCE_PAISE, "HDFC1")],
+    )
+    result = run(ledger)
+    assert result.matches == []
+    assert result.unmatched_credits == ["HDFC1"]
+
+
+def test_r2_uses_a_partial_utr_as_evidence_but_never_as_a_preference(tmp_path):
+    """PRD 5 allows one discriminator: a reference naming a settlement in one subset only.
+
+    With the reference present exactly once the tie is evidence, not a guess, and R2 may
+    take it. The companion case -- the same four settlements with a bare narration -- is
+    `test_r2_refuses_when_two_subsets_tie_exactly`, and it must stay a refusal.
+    """
+    ledger = ledger_of(
+        tmp_path,
+        settlements=[("setl_1", "05-Jan-26", "111111111111", 40000),
+                     ("setl_2", "06-Jan-26", "222222222222", 60000),
+                     ("setl_3", "05-Jan-26", "333333333333", 35000),
+                     ("setl_4", "06-Jan-26", "444444444444", 65000)],
+        bank=[("06/01/2026", NEFT.format(utr="333333333333"), 100000, "HDFC1")],
+    )
+    result = run(ledger)
+    assert [m.rung for m in result.matches] == ["R2"]
+    assert set(result.matches[0].settlement_ids) == {"setl_3", "setl_4"}
+    assert result.ambiguous == []
+
+
+def test_r2_carries_duplicate_payments_into_the_match(tmp_path):
+    """Payment ids come from the payments' own settlement_id, which is what the key counts.
+
+    An E10 duplicate carries its original's settlement and belongs inside the match. Deriving
+    the set any other way scores the whole bundle false with every settlement correct.
+    """
+    ledger = ledger_of(
+        tmp_path,
+        settlements=[("setl_1", "05-Jan-26", "111111111111", 40000),
+                     ("setl_2", "06-Jan-26", "222222222222", 60000)],
+        bank=[("06/01/2026", BARE, 100000, "HDFC1")],
+        payments=[("pay_1", "setl_1"), ("pay_1dup", "setl_1"), ("pay_2", "setl_2")],
+    )
+    result = run(ledger)
+    assert set(result.matches[0].payment_ids) == {"pay_1", "pay_1dup", "pay_2"}
+
+
+def test_r2_will_not_reuse_a_settlement_two_credits_both_need(tmp_path):
+    """Two credits whose only exact combination shares a settlement: neither gets it."""
+    ledger = ledger_of(
+        tmp_path,
+        settlements=[("setl_1", "05-Jan-26", "111111111111", 40000),
+                     ("setl_2", "06-Jan-26", "222222222222", 60000),
+                     ("setl_3", "06-Jan-26", "333333333333", 70000)],
+        bank=[("06/01/2026", BARE, 100000, "HDFC1"),
+              ("06/01/2026", BARE, 110000, "HDFC2")],
+    )
+    result = run(ledger)
+    assert result.matches == []
+    assert sorted(result.unmatched_credits) == ["HDFC1", "HDFC2"]
