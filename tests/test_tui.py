@@ -6,14 +6,16 @@ layer restates something the engine already knows, which is where a render layer
 starts lying about the number it renders.
 """
 
+import os
 import re
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 from tui.palette import Pen, pen as make_pen
 from tui.primitives import (bps, bucket_meter, decimal_spine, hatched, level_bar,
-                            level_line, offset_row, show_bps)
+                            level_line, show_bps)
 
 PLAIN = Pen(colour=False, motion=False)
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,12 +90,6 @@ def test_the_bucket_meter_itemises_and_never_totals():
 def test_a_bucket_holding_money_never_draws_as_empty():
     lines = flat(bucket_meter([("tail", 1, "open", "")], 10000, PLAIN, width=10))
     assert lines[0].count("▒") == 1
-
-
-def test_an_offset_row_is_misalignment_not_a_badge():
-    row = ANSI.sub("", offset_row(600, 1000, 10, PLAIN))
-    assert row == "██████▒▒▒▒┊"
-    assert not any(c in row for c in "[]()•●○!")
 
 
 def test_in_transit_is_a_texture_and_never_an_accent():
@@ -223,3 +219,136 @@ def test_the_level_bar_gap_is_the_identity_residue():
     expected, received, in_transit = sides(ledger, classify(ledger, run(ledger))[0])
     assert in_transit == truth["totals"]["in_transit_paise"]
     assert expected - received == check_conservation(ledger, truth)
+
+
+# --- the exception browser -----------------------------------------------------------------
+
+import io
+
+from tui.browse import (getkey, key_of, load_decisions, matches, ordered, save_decisions,
+                        two_sides, weight)
+
+
+class Row:
+    """A stand-in for `exceptions.Exception_`, so these tests fix their own inputs rather
+    than depending on whatever the classifier happened to emit this run."""
+
+    def __init__(self, code, record_type="bank", record_id="B1", other_id="",
+                 delta=0, rung="R2", reason="because."):
+        self.code, self.record_type, self.record_id = code, record_type, record_id
+        self.other_id, self.delta_paise, self.rung, self.reason = other_id, delta, rung, reason
+
+    @property
+    def is_break(self):
+        return self.code != "E14"
+
+
+DAY = date(2026, 3, 31)
+
+
+class Book:
+    orders = [{"order_id": "o1", "gross_amount_paise": 500000, "status": "paid"}]
+    payments = [{"payment_id": "p1", "order_id": "o1", "amount_paise": 150900,
+                 "method": "card", "fee_paise": 2233, "gst_paise": 402,
+                 "settlement_id": "s1", "captured_at": DAY}]
+    refunds = [{"refund_id": "r1", "payment_id": "", "amount_paise": 4000, "type": "refund"}]
+    settlements = [{"settlement_id": "s1", "net_amount_paise": 900000, "utr": "U1",
+                    "settled_at": DAY, "fee_paise": 0, "gst_paise": 0,
+                    "refund_paise": 0, "adjustment_paise": 0}]
+    bank = [{"bank_ref": "B1", "credit_paise": 283928, "narration": "N", "txn_date": DAY,
+             "debit_paise": 0, "closing_balance_paise": 0}]
+
+
+def test_weight_is_the_delta_wherever_there_is_one():
+    assert weight(Row("E05", "payment", "p1", delta=-926), Book) == 926
+    assert weight(Row("E02", "settlement", "s1", delta=-900000), Book) == 900000
+
+
+def test_e14_is_weighted_by_the_credit_it_holds_not_by_its_zero_delta():
+    """E14's delta is zero because nothing is at risk -- that is the code's whole meaning.
+    Sorting on it would put the highest-leverage row in the run last."""
+    assert weight(Row("E14", "bank", "B1", delta=0), Book) == 283928
+
+
+def test_no_other_zero_delta_code_borrows_its_record_amount():
+    """The version that fell back to the record amount for *every* zero-delta code sorted an
+    E13 second in the whole list, on money that had already matched and was never at issue."""
+    for code in ("E13", "E06", "E07", "E08", "E09", "E12"):
+        assert weight(Row(code, "bank", "B1", delta=0), Book) == 0
+
+
+def test_the_list_is_sorted_by_money_held_out_descending():
+    rows = [Row("E05", "payment", "p1", delta=-926), Row("E14", "bank", "B1"),
+            Row("E13", "bank", "B1"), Row("E02", "settlement", "s1", delta=-900000)]
+    assert [e.code for e in ordered(rows, Book)] == ["E02", "E14", "E05", "E13"]
+
+
+@pytest.mark.parametrize("flt, code, keep", [
+    ("", "E05", True), ("E05", "E05", True), ("e05", "E05", True), ("E05", "E10", False),
+    ("b", "E05", True), ("b", "E14", False), ("q", "E14", True), ("q", "E05", False)])
+def test_the_filter_takes_a_code_or_the_break_question_split(flt, code, keep):
+    assert matches(Row(code), flt) is keep
+
+
+def test_the_arithmetic_for_a_fee_variance_shows_both_sides_and_the_subtraction():
+    left, right, sums = two_sides(Row("E05", "payment", "p1", delta=926), Book, None)
+    assert left[0] == "contracted" and right[0] == "billed"
+    assert ("total", "₹35.61", True) in left[1]      # 200bps + 1800bps gst on Rs 1,509
+    assert ("total", "₹26.35", True) in right[1]
+    assert "₹26.35 billed − ₹35.61 contracted = ₹9.26 under" in sums[0]
+
+
+def test_a_duplicate_marks_the_id_as_the_differing_field_never_the_amount():
+    """The two rows agreeing on the amount is what makes one of them a duplicate. Painting
+    the accent on the field that agrees points the reader at the wrong thing."""
+    left, _, sums = two_sides(Row("E10", "payment", "p1", other_id="p1"), Book, None)
+    differs = {field for field, _, d in left[1] if d}
+    assert differs == {"payment id"}
+    assert "only the id differs" in sums[0]
+
+
+def test_arrow_keys_are_j_and_k_and_a_bare_escape_does_not_block():
+    assert getkey(io.StringIO("j")) == "j"
+    assert getkey(io.StringIO("\x1b[A")) == "k"
+    assert getkey(io.StringIO("\x1b[B")) == "j"
+    assert getkey(io.StringIO("\x1b")) == "\x1b"
+
+
+def test_a_decision_round_trips_through_the_file(tmp_path, monkeypatch):
+    import tui.browse as browse
+    monkeypatch.setattr(browse, "DECISIONS", tmp_path.joinpath("decisions.json"))
+    save_decisions({"E14:B1": {"decision": "kept open", "note": "asked ops"}})
+    assert load_decisions()["E14:B1"]["note"] == "asked ops"
+
+
+def test_a_corrupt_decisions_file_never_takes_the_browser_down(tmp_path, monkeypatch):
+    """A reviewer's judgments are not engine output and must not be able to stop a run.
+    An unreadable file reads as no decisions; the next write replaces it."""
+    import tui.browse as browse
+    bad = tmp_path.joinpath("decisions.json")
+    bad.write_text("{not json", encoding="utf-8")
+    monkeypatch.setattr(browse, "DECISIONS", bad)
+    assert load_decisions() == {}
+
+
+def test_decisions_are_written_by_rename_so_a_half_write_is_never_the_state(tmp_path,
+                                                                           monkeypatch):
+    import tui.browse as browse
+    path = tmp_path.joinpath("decisions.json")
+    monkeypatch.setattr(browse, "DECISIONS", path)
+    save_decisions({"a": {"decision": "accepted"}})
+    seen = []
+    real = os.replace
+
+    def watched(src, dst):
+        seen.append((Path(src).name, Path(dst).name))
+        return real(src, dst)
+
+    monkeypatch.setattr(browse.os, "replace", watched)
+    save_decisions({"a": {"decision": "accepted"}, "b": {"decision": "kept open"}})
+    assert seen and seen[0][1] == "decisions.json"
+    assert len(load_decisions()) == 2
+
+
+def test_the_key_is_the_code_and_the_record_so_two_codes_on_one_record_stay_apart():
+    assert key_of(Row("E13", "bank", "B1")) != key_of(Row("E01", "bank", "B1"))

@@ -8,3 +8,6 @@ __pycache__/
 !README.md
 !ARCHITECTURE.md
 !DECISIONS.md
+!PRD.md
+!EXPLAINER.md
+decisions.json

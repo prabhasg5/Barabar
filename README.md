@@ -42,16 +42,40 @@ rupee figure for money the merchant lost without knowing.
 
 ## Quickstart
 
-Three commands. Needs Python 3.12 and [uv](https://docs.astral.sh/uv/). **No API key, no
-network.** The dataset and every model response are committed.
+**One command.** No API key, no network, and nothing to install — the engine has zero runtime
+dependencies, the dataset is committed, and every model response is committed under
+`llm_cache/`.
 
 ```bash
-uv sync                                                    # install (pytest + hypothesis only)
-uv run pytest -q                                           # 150 tests
-PYTHONPATH=src uv run python eval/harness.py heldout       # score against held-out ground truth
+make demo
 ```
 
-That last command prints the close. Nothing else needs to run.
+That runs the close on the bundled held-out set and drops you into the exception list. Press
+enter at the prompt; `j`/`k` move, enter opens an exception, `/` filters, `q` quits.
+
+Needs Python 3.12. If you have [uv](https://docs.astral.sh/uv/) the Makefile uses it and pins
+the version for you; otherwise it uses whatever `python3` is on your path.
+
+**No Python at all?** One command, one dependency, Docker:
+
+```bash
+docker build -t barabar . && docker run --rm -it barabar
+```
+
+The `-it` matters — it is an interactive terminal program, and without a tty the exception
+browser prints the list once and exits. To run it on your own exports, mount them:
+
+```bash
+docker run --rm -it -v "$PWD/exports:/data:ro" barabar run /data
+```
+
+### Everything else
+
+```bash
+make run DIR=exports/   # the close, on your own CSVs — identified by header, not filename
+make eval               # score against the held-out answer key, including the LLM rung
+make test               # the full suite
+```
 
 <details>
 <summary>Other commands</summary>

@@ -133,19 +133,6 @@ def bucket_meter(buckets: list[tuple[str, int, str, str]], total: int, pen,
     return out
 
 
-def offset_row(received: int, expected: int, width: int, pen, at_risk: bool = False) -> str:
-    """One exception as misalignment: a bar that stops short of the level line. No badge.
-
-    This is the list row's version of the level bar, and the reason the exceptions list has
-    a ragged right edge that says how the month went before a number is read.
-    """
-    scale = max(expected, received, 1)
-    got = _span(width, received, scale)
-    short = max(0, _span(width, expected, scale) - got)
-    ink = pen.risk if at_risk else pen.open
-    return FILL * got + ink(GAP * short) + " " * (width - got - short) + LEVEL
-
-
 def hatched(cells: int) -> str:
     """In transit. A texture, not a colour -- nothing is wrong with this money."""
     return HATCH * max(0, cells)

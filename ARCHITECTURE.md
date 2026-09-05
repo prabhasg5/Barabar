@@ -516,6 +516,19 @@ time. Re-measured, **both halves were wrong**: unfiltered is 2 of 8 train and 1 
 windowed is 1 and 1 *(train+heldout, 6b, 2026-09-01)*. The conclusion it supported still
 holds — the filter, not the solver, is what removes ambiguity — but it held by luck.
 
+**Instance 6 arrived while the exceptions list was being built, and it is the smallest and most
+instructive of them.** The uniqueness guard's cost is *4.58 coverage points* — the delta from
+88.73% to 93.31%. E14's share of payments is *4.59%* — 231 of 5,038. Two different quantities
+that agree to one digit, both correct, and a new docstring wrote "4.59 coverage points" for
+what is 4.58. Nothing downstream would have failed. It was caught by grepping the figure across
+the docs before shipping, which is now five of the six instances found by reading rather than
+by a test.
+
+The lesson is narrower than "restating a number is bad" and worth stating separately: **two
+quantities that round to neighbouring values are the hardest possible pair to keep straight**,
+because the wrong one never looks wrong. Where both are needed, both get named — the delta is
+"coverage points", the share is "of payments" — and neither is written bare.
+
 So: every other mention points at the deriving place instead of repeating the number. Where a
 second copy is genuinely unavoidable — `world.py`'s decoy knobs must stay independent of
 `ladder`'s R2 constants, or every downstream test asserts a variable equals itself — a test
@@ -686,6 +699,107 @@ What the run prints is therefore held to the same standard as a screen would be:
 caveat reprints underneath the precision figure so the two cannot be separated, the coverage gap
 is itemised by code rather than totalled, and codes with support of three or fewer are listed
 every run as too thin to claim a rate.
+
+### The palette is six values, and colour means exactly one thing
+
+```
+--paper   #FBFBF9   ground, faintly warm, not cream
+--ink     #14161A   text and matched figures
+--rule    #DEDEDA   hairlines
+--muted   #6E7178   labels, metadata, secondary text
+--open    #B86B0A   ochre — needs review, the only accent
+--risk    #A61E24   deep red — money confirmed lost or at risk
+```
+
+**The rule that governs them is one sentence: colour appears only where money needs
+attention.** Restraint is the design rather than a constraint on it. If everything tied, the
+screen is monochrome — which means the presence of colour is itself the finding, readable
+before a single figure is. That correspondence holds everywhere with no exceptions, because
+one exception destroys it: an accent spent on decoration teaches the reader that an accent
+means nothing.
+
+**E14 uses `--open`, never `--risk`.** No money is at risk in an ambiguity. Two subsets tie
+exactly to the credit and the evidence does not single one out — the money is all present and
+accounted for, and what is outstanding is a decision. Painting it red would tell a controller
+to panic about a question, and would put the one thing in the run that is *not* a problem into
+the colour reserved for confirmed loss. `test_in_transit_is_a_texture_and_never_an_accent`
+guards the same principle on the other state where nothing is wrong.
+
+**Three of the six are rendered differently in a terminal, and none of the three is a seventh
+value.** Each looks like a violation and each is forced by the medium:
+
+- **`--paper` is never emitted.** The ground belongs to the user's terminal. Painting cream
+  over it fights their theme and leaves a rectangle in every screenshot.
+- **`--ink` is the terminal's default foreground.** Ink is the monochrome state, and a
+  monochrome state has to be legible on a light terminal and a dark one. `#14161A` on a dark
+  ground is invisible; the terminal's own foreground is correct on both by construction.
+- **`--rule` is dim rather than `#DEDEDA`.** A hairline must sit *under* the text. `#DEDEDA` is
+  under ink on paper and over it on a dark ground, which inverts the hierarchy exactly where a
+  screen recording would show it.
+
+`--muted`, `--open` and `--risk` go out verbatim as truecolour. They carry meaning; the other
+three carry hierarchy, and hierarchy is what a terminal already has an opinion about. Colour is
+never the sole carrier either way — every coloured state in the run also has a word beside it,
+and `NO_COLOR` is honoured on the convention's own terms: off when the variable is present and
+**not empty**, so `NO_COLOR=0` still disables colour and `NO_COLOR=` still leaves it on.
+
+### The offset row was designed for a raggedness this data does not have
+
+PRD §10's element set has one entry the build measured and then removed. **The offset row:** an
+exception renders as two short bars that do not align — no badge, no icon — and the argument
+for it is that the ragged right edge of a scrolled exceptions list states the shape of the
+month before a single figure is read. That is a good argument and it is the design's own
+grammar applied at row scale.
+
+It was built, wired into the list at ten cells, and measured. **The edge is not ragged.** On
+this data a finding is either ~100% of its record — E01, E02, E10 and E14, where the money
+never arrived or all of it is duplicated — or under 2% of it, where a fee is off by nine rupees
+on a payment of fifteen hundred. There is nothing in between, so every row renders as one of
+two shapes.
+
+**Two shapes is a badge**, which is the one thing §10's own rule forbids the element from
+becoming. So the list is text, the rupee column does the ranking, and the primitive is deleted
+rather than left unused: dead code in a repo someone reads is a claim the build is not making.
+
+The measurement is a property of *this dataset*, not of the idea. A merchant whose breaks are
+mostly partial shortfalls — a settlement short by a fifth, a credit that arrived two thirds
+paid — would get exactly the edge the PRD describes, and the element should come back for them.
+It costs four characters of reason text to find out, and the honest posture is the same one §5
+takes about R3's delta of 0.00: build it, measure it, report the number that came out.
+
+### The level bar has two sides, not three
+
+The signature element is two bars sharing a left origin, a dashed level line marking where both
+must end, and the gap between their right edges as the finding. It appears at three scales —
+period, batch, record — and it is the only chart in the product.
+
+**In-transit money is not on it.** An earlier version of this document said in-transit money
+renders as a hatched outline in ink on the bar, the shape money will occupy once it lands. It
+does not, and the reason is better than the original design.
+
+Money settled after the statement closed **is not expected in the period**. It is neither owed
+to this bar nor missing from it, so drawing it on the same axis draws a comparison that does not
+exist — it makes a clock look like a break, in the one element whose whole job is to say whether
+two things line up.
+
+The failure that forced it was concrete and immediate. Held-out draws 44 cells of bar; the
+credit fills 43 of them; hatching the in-transit slice took the one cell that was left, and the
+₹1,28,136.82 break rendered as **zero cells** under a bar that looked finished. The finding
+disappeared under the thing that is not a finding. A break that rounds away to nothing is the
+worst failure this element has, so the span helper now floors a non-zero shortfall at one cell
+as well.
+
+**So the upper bar is `expected − in_transit` and the lower is the bank credit, and the gap is
+the identity residue and nothing else.** In transit keeps the hatch, uncoloured, in its own
+bucket three blocks down, beside reconciled and still-open — which is where it can be compared
+against the things it actually belongs next to.
+
+The in-transit figure is derived from the classifier's E12 rows, not read out of the answer key,
+which is what makes it a figure the engine could produce on a real merchant's files.
+`test_the_level_bar_gap_is_the_identity_residue` asserts the gap equals the harness's
+`unexplained_paise` — through `check_conservation`, not against a written-down number. A pinned
+figure would survive the next regeneration by quietly describing the previous dataset, which is
+the failure §8's corollary exists to prevent.
 
 ### Ingest is where a real merchant's files will break this
 

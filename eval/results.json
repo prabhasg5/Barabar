@@ -490,7 +490,7 @@
         "refunds_unlinked": 4,
         "total_paise": 234748
       },
-      "run_ms": 1,
+      "run_ms": 0,
       "rung_attribution": {
         "R0": 23,
         "R1": 12,

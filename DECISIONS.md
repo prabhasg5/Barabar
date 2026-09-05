@@ -1016,7 +1016,7 @@ The restatement entry above described a habit. It is now hard rule 7 in `CLAUDE.
 number that justifies a decision is re-measured when its data is regenerated, or it is
 deleted.** Not updated-if-convenient — re-run or removed.
 
-Two enforcement mechanisms, because four of the five instances were found by reading and only
+Two enforcement mechanisms, because five of the six instances were found by reading and only
 one by a test:
 
 1. **Provenance tags.** Every measured number in `PRD.md`, `ARCHITECTURE.md` and
@@ -1899,3 +1899,123 @@ options worth parsing.
 `timedelta(milliseconds=…).total_seconds()`. `10 ** -3` would have slipped past the no-float
 scan just as quietly, which is the reason not to use it: the scan is only worth having if
 nothing in `src/` is written to route around it.
+
+---
+
+## 2026-09-04 — Steps 11 and 12: the exception list and one exception opened
+
+`src/tui/browse.py`, plus the design section `ARCHITECTURE.md` had been missing. 195 tests, 45
+of them the render layer. **No eval number moved** — `results.json` re-run on both seeds and
+through R3 diffs to `run_ms` alone.
+
+### Two doc fixes, because the committed docs described things the code does not do
+
+`PRD.md` is gitignored — `.gitignore` whitelists only `README.md`, `ARCHITECTURE.md` and
+`DECISIONS.md` — so the six palette values and the rule governing them lived where a judge
+cloning the repo could not read them. They are now `ARCHITECTURE.md` §10, with the accent rule
+and the reason E14 is always `--open`: no money is at risk in an ambiguity, and painting a
+question red tells a controller to panic about a decision. `CONTEXT.md` points there rather
+than restating the hex, per §8's corollary.
+
+The same section said in-transit money renders as a hatched outline on the level bar. It does
+not, and the correction is written as a correction rather than a quiet edit, because the reason
+is the interesting part: money settled after the statement closed is not expected in the
+period, so it is not on that axis, and drawing it there was drawing a comparison that does not
+exist.
+
+### The list opens on everything. The argument for breaks-first is real and loses
+
+**For:** a controller's first question is what is wrong, not what is unanswered, and PRD §6 says
+burying a question inside a pile of problems wastes the attention the pile needs.
+
+**Against, and decisive:** a default filter is invisible state. A reader who does not notice it
+believes they have seen everything — the same class of error as a silent row drop, which is the
+one failure this tool exists to refuse. The separation §6 asks for is achieved by the header,
+which counts and prices breaks and questions apart, and by `/`, which is one keystroke and
+leaves a visible marker in the footer when it is on.
+
+### `r` opens the detail scrolled to the review prompt. It is not a second way to decide
+
+A decision made from the list is a decision made on a code chip and a rupee figure. "Keep open"
+requires a note, and a note written without the arithmetic on screen is a worse note. So `r`
+skips the reading; it cannot skip the evidence. One code path writes `decisions.json`.
+
+### The sort had to be defined before it meant anything
+
+`delta_paise` is zero on **42 of 138** held-out rows — E06 to E09, E12, E13, and E14. Sorting
+on it drops 30% of the list to the bottom in classifier order and puts the single
+highest-leverage row in the run, the one question holding 4.58 coverage points, underneath 96
+fee variances of a few rupees each.
+
+**First attempt: fall back to the record's own amount for any zero-delta row.** Measured, and
+worse — it sorted an E13 *second in the whole list* on ₹2,44,805 of money that had already
+matched and was never at issue. "The amount on the record" and "the amount at stake" are
+different quantities and only the second can be summed in a header.
+
+**What shipped:** `abs(delta_paise)`, with E14 alone falling back to the credit it holds. One
+special case, with a stated reason: E14's zero is a claim about risk, not about size. Every
+other zero-delta code is genuinely holding nothing out of the close — E13 is an unreadable
+narration on a credit that matched. The header's two totals are then the same quantity on both
+sides, so it is a real total. Three tests pin all three halves.
+
+### The offset row: built, wired, measured, deleted
+
+PRD §10 puts it in the exceptions list on the argument that a scrolled list's ragged right edge
+states the shape of the month before a figure is read. It was built, wired in at ten cells, and
+**the edge is not ragged.** On this data a finding is either ~100% of its record (E01, E02, E10,
+E14 — the money never arrived, or all of it is duplicated) or under 2% of it (E05, E03), with
+nothing between. Every row renders as one of two shapes, and two shapes is a badge — which is
+the thing §10's own rule forbids.
+
+The first version of this entry kept `primitives.offset_row` and `browse.misalignment` unused
+but tested, on the grounds that the measurement is a property of this dataset rather than of
+the idea. That was the weaker version of the same story: **dead code in a repo a judge reads is
+a claim the build is not making**, and an unused primitive says "we shipped the element"
+while the list says otherwise. Both are deleted. The measurement moved to `ARCHITECTURE.md`
+§10, beside the palette, where it reads as what it is — build it, measure it, report the number
+that came out, the same posture as R3's delta of 0.00.
+
+It cost four characters of reason text to find out.
+
+### Detail scrolls rather than trimming
+
+An E14 detail is 34 lines: the reason, the credit, the candidate stack with every settlement
+inside every subset, the full R0→R3 trail, and the model's own words. It cannot be cut to 24 —
+being the screen that shows all of it is the entire job — so `j`/`k` scroll it and the footer
+counts what is below. Moving between exceptions is what the list is for.
+
+### Watched failing, all seven
+
+- **`weight` falling back to the record amount for every zero-delta code** → the E13 test and
+  the sort test. 2 failed.
+- **E14 sorting on its zero delta** → the E14 weight test and the sort test. 2 failed.
+- **E10 marking the amount as the differing field instead of the id** → the duplicate test. The
+  two rows agreeing on the amount is what makes one a duplicate; the accent must not point at
+  the field that agrees.
+- **The filter dropping the breaks/questions split** → two parametrised cases.
+- **`decisions.json` written in place rather than by rename** → the atomic-write test.
+- **A corrupt decisions file propagating** → a reviewer's judgment must not be able to stop a run.
+- **The arrow table emptied** → the key test.
+
+### Instance 6 of a number drifting, and the narrowest lesson yet
+
+A new docstring wrote "4.59 coverage points" for what is 4.58. The uniqueness guard's cost is
+the coverage *delta*, 88.73% → 93.31% = 4.58 points; E14's *share of payments* is 231 of 5,038
+= 4.59%. Both figures already existed, both correct, one digit apart. Nothing downstream would
+have failed and no test could have caught it — it was found by grepping the figure across the
+docs before shipping, which makes it five of six instances found by reading.
+
+`ARCHITECTURE.md` §8 now carries the lesson, which is narrower than "restating a number is
+bad": **two quantities that round to neighbouring values are the hardest possible pair to keep
+straight, because the wrong one never looks wrong.** Both now get named where they appear — the
+delta is "coverage points", the share is "of payments" — and neither is written bare. The
+count in `CLAUDE.md` and in the 2026-09-01 entry moved from five to six, which is the rule
+applying to a number the rule itself produced.
+
+### `decisions.json`, and why it is not in `results.json`
+
+A reviewer's judgment is not engine output. Mixing them means a rerun either clobbers the
+judgments or inherits them as if they were measurements. Separate file, gitignored — it is
+per-user state, not a deliverable — written to a temp path and renamed, so a half-written file
+is never the state on disk. Keyed on `code:record_id`; the ceiling (two datasets sharing a
+record id) is marked in a `ponytail:` comment rather than solved.

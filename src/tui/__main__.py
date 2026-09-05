@@ -27,6 +27,7 @@ from ingest.load import ATTRS, IngestError, SCHEMAS, detect, load
 from match.ladder import TOLERANCE_PAISE, Result, index, r0, r1, r2, r3
 from money import Paise, format_rupees
 from propose import propose
+from tui.browse import browse
 from tui.palette import pen as make_pen
 from tui.primitives import (bps, bucket_meter, decimal_spine, level_bar, show_bps)
 
@@ -378,6 +379,10 @@ def close(folder: Path, pen, provider: str = PROVIDER) -> tuple:
     block_close(pen, ledger, result, exceptions, cover)
     if unclassified:
         out(f"  {pen.risk(str(len(unclassified)) + ' records reached no code.')}")
+    # Straight into the list. The close answers "can I sign off"; the answer is no until
+    # something is done about the pile, and making the reader remember a second command to
+    # see the pile puts a step between the question and the only thing that resolves it.
+    browse(ledger, result, exceptions, pen)
     return ledger, result, exceptions, cover
 
 
