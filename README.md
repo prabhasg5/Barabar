@@ -338,21 +338,6 @@ dispute, only to see.
 
 ---
 
-## What is built, and what is not
-
-| | |
-|---|---|
-| ✅ | Money primitives, integer paise, no-float guard |
-| ✅ | Synthetic generator + ground truth, two seeds |
-| ✅ | Ingest: header-signature detection, normalisation, loud validation |
-| ✅ | R0 + R1 + R2 + R3 and the validator |
-| ✅ | Eval harness, conservation and partition checks |
-| ✅ | Exception classifier, 12 of 14 codes raised, 2 declared blind |
-| ✅ | Fee variance audit + refund fee burden |
-| ⬜ | **The three screens.** Nothing is rendered yet — this is a CLI and an eval harness. |
-| ⬜ | Review decisions persisted between runs |
-| ⬜ | `make demo`, deploy |
-
 **Known gaps, stated rather than hidden:**
 
 - **The Groq run has not happened.** The second provider is built behind the same
@@ -388,41 +373,6 @@ tests/              150 tests, unit and property-based
 Further reading in the repo: **[`ARCHITECTURE.md`](ARCHITECTURE.md)** is the decisions and the
 trade-offs rejected. **[`DECISIONS.md`](DECISIONS.md)** is the dated build log — what broke,
 what changed, number before → after.
-
----
-
-## Reproducibility
-
-Every model response is cached on a SHA-256 of the exact prompt bytes plus the model id, under
-`llm_cache/`, and committed. Reruns call nothing.
-
-So identical inputs produce identical *accepted matches* — the validator is deterministic and
-the proposal layer is reproducible — and more usefully, **a stranger can clone this repo and
-reproduce every number on this page with no API key at all.**
-
-A cache miss with no key raises rather than degrading. An R3 that quietly skipped its rung would
-report a zero meaning "not run", indistinguishable from the zero meaning "nothing left to find",
-and telling those two apart is the whole point of that rung.
-
-To run it live instead, copy `.env.example` to `.env` and add a Google AI Studio key.
-
----
-
-## Design of the numbers
-
-Two conventions this project holds to, both of which cost something.
-
-**Every measured number carries a `(dataset, step, date)` tag.** A number without one is a
-derivation or a rule. This exists because five numbers here survived a data regeneration by
-being quoted forward instead of re-run — a tagged number is visibly stale-able, an untagged one
-looks eternal.
-
-**A parameter is justified by the mechanism that produces it, not by the range one dataset
-showed.** R2's date window is ±6 days because a size-N bundle spans N−1 settlement gaps on
-business days, and one weekend inside those gaps adds two calendar days: 4 + 2 = 6. It was
-originally ±5, fitted to a training set whose largest bundle happens to be size 4. Held-out had
-a size-5 bundle carrying 376 payments sitting 6 days from its credit — silently unmatchable,
-worth 7.47 coverage points.
 
 ---
 
