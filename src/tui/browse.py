@@ -478,7 +478,7 @@ def browse(ledger, result, exceptions, pen, height: int = 24) -> dict:
             shown = [e for e in state["rows"] if matches(e, state["filter"])]
             state["cursor"] = max(0, min(state["cursor"], len(shown) - 1))
             screen.draw(list_lines(state) if view == "list" else detail_frame(state))
-            key = getkey(self.stdin)
+            key = getkey(screen.stdin)
 
             if key in ("q", "\x1b", "\x03"):
                 if view == "detail":

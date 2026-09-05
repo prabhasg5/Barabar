@@ -2031,6 +2031,39 @@ in the folder is skipped — with two examples. An empty line and a bad path bot
 neither is worth ending the session over. Quotes are stripped from the path, because dragging
 a folder onto a terminal adds them and that failure would not have been the user's.
 
+### A NameError shipped to the user because the tested path was not the live path
+
+`getkey(self.stdin)`, inside `browse()`, which is a function and not a method. It crashed on
+the first keypress of every real run and passed every test.
+
+**The cause is structural, not careless.** `browse()` early-returns when there is no terminal:
+
+    with Screen(pen) as screen:
+        if not screen.live:
+            screen.draw(list_lines(state))
+            return state["decisions"]
+        ...the loop nothing tested...
+
+Every unit test and every piped invocation — including the README's own `printf '\n\n' |
+barabar` — takes that early return. The interactive loop below it had no coverage at all, so
+the 199 green tests were describing a branch no user ever executes. The pty driver that would
+have caught it existed and had been run, but *before* the edit that introduced the bug; after
+it, only the unit tests and piped runs were re-run.
+
+**The guard is a pty test in the suite now**, not a script beside it. It forks a terminal,
+types enter / enter / enter / q / q, and asserts the alternate screen was entered *and left*,
+that the list and a detail rendered, and that nothing raised.
+
+Entering and leaving are asserted separately, and that mattered: the first version checked only
+that the browser started, and a deliberate break that stopped `q` quitting **passed** — every
+assertion found its text and the process merely hung until the timeout. `1049l` is what proves
+a key got back out and the terminal was restored. Both breaks now fail: the shipped
+`NameError`, and `q` not quitting.
+
+That is the third green-but-blind test on this project, after `test_a_decoy_is_a_different_subset`
+and the NO_COLOR one. The pattern in all three is the same — **the test exercised something
+adjacent to the thing that could break.**
+
 ### Docker was built and deleted, for the reason the offset row was
 
 It was added on the "runs on every computer" argument and removed on measurement. Two facts

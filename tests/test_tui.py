@@ -8,6 +8,7 @@ starts lying about the number it renders.
 
 import os
 import re
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -388,3 +389,67 @@ def test_both_streams_have_to_be_a_terminal(stdin, stdout, live):
     """Keys come from stdin; the alternate buffer and cursor moves go to stdout. A pipe on
     either end and the browser prints its list once instead."""
     assert interactive(stdin, stdout) is live
+
+
+# --- the interactive loop, driven through a real terminal ---------------------------------
+
+def drive(keys: str, args: list[str], seconds: int = 30) -> str:
+    """Run the CLI attached to a pty and type `keys` at it. Returns everything it printed."""
+    import os
+    import pty
+    import select
+    import time
+
+    pid, fd = pty.fork()
+    if pid == 0:                                  # child: become the CLI
+        os.environ["PYTHONPATH"] = str(ROOT.joinpath("src"))
+        os.execv(sys.executable, [sys.executable, "-m", "tui"] + args)
+        os._exit(1)                               # pragma: no cover
+    seen, sent, deadline = bytearray(), 0, time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([fd], [], [], 0.3)
+        if ready:
+            try:
+                chunk = os.read(fd, 65536)
+            except OSError:
+                break
+            if not chunk:
+                break
+            seen.extend(chunk)
+        elif sent < len(keys):
+            os.write(fd, keys[sent].encode())
+            sent += 1
+        else:
+            break
+    os.close(fd)
+    return bytes(seen).decode("utf-8", "replace")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="no pty")
+def test_the_interactive_browser_actually_runs():
+    """The one path nothing else in this file reaches.
+
+    `browse()` early-returns when there is no terminal, so every other test here and every
+    piped run exercises the print-once branch. A `NameError` on the key-reading line shipped
+    because of exactly that: `getkey(self.stdin)` in a free function, where `self` does not
+    exist. It was correct in every test and broken for every actual user.
+
+    So this one drives a real pty: enter past the title, enter past the detection prompt,
+    enter to open the top exception, then q q. It asserts the loop ran -- the alternate screen
+    was entered and left, the list rendered, a detail rendered -- and that nothing raised.
+
+    **Leaving the alternate screen is asserted separately from entering it.** The first version
+    checked only that the browser started, and a deliberate break that stopped `q` quitting
+    passed it: the assertions all found their text and the process simply hung until the
+    timeout. Entering proves the loop began; `1049l` proves a key got it out again and the
+    terminal was put back.
+    """
+    if not ROOT.joinpath("data", "heldout").exists():
+        pytest.skip("run: PYTHONPATH=src python -m generate heldout")
+    out = drive("\n\n\rqq", [])
+    assert "Traceback" not in out, out[-2000:]
+    assert "\x1b[?1049h" in out, "the browser never entered the alternate screen"
+    assert "EXCEPTIONS" in out, "the exception list never rendered"
+    assert "E14" in out, "the top exception never rendered"
+    assert "combinations" in out, "enter did not open the detail"
+    assert "\x1b[?1049l" in out, "q never got out -- the terminal was left in raw mode"
