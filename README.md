@@ -42,40 +42,55 @@ rupee figure for money the merchant lost without knowing.
 
 ## Quickstart
 
-**One command.** No API key, no network, and nothing to install — the engine has zero runtime
-dependencies, the dataset is committed, and every model response is committed under
-`llm_cache/`.
-
 ```bash
-make demo
+git clone <this repo> && cd Barabar
+./barabar
 ```
 
-That runs the close on the bundled held-out set and drops you into the exception list. Press
-enter at the prompt; `j`/`k` move, enter opens an exception, `/` filters, `q` quits.
+**That is the whole setup.** Nothing to install: the engine has zero runtime dependencies, the
+dataset is committed, and every model response is committed under `llm_cache/`, so it runs with
+no API key and no network.
 
-Needs Python 3.12. If you have [uv](https://docs.astral.sh/uv/) the Makefile uses it and pins
-the version for you; otherwise it uses whatever `python3` is on your path.
+It opens on what the name means and three lines of what the tool does, then one prompt:
 
-**No Python at all?** One command, one dependency, Docker:
+```
+  BARABAR
 
-```bash
-docker build -t barabar . && docker run --rm -it barabar
+  barabar is Hindi for level -- hisaab barabar, accounts settled.
+  It ties lump-sum bank credits back to the orders inside them,
+  names what did not tie, and prices what it cost.
+
+  ▸ press enter to run the demo
+    f  use your own files
+    q  quit
 ```
 
-The `-it` matters — it is an interactive terminal program, and without a tty the exception
-browser prints the list once and exits. To run it on your own exports, mount them:
+Press enter. It runs the close on the bundled held-out set and drops straight into the
+exception list — `j`/`k` move, enter opens one, `r` reviews it, `/` filters, `q` quits.
+There are no subcommands to read. `?` shows the keys from anywhere.
+
+Needs **Python 3.10 or newer**, which is measured rather than assumed: the demo and all 199
+tests pass on 3.10, 3.11, 3.12 and 3.13. `./barabar` finds a usable interpreter itself and
+prefers [uv](https://docs.astral.sh/uv/) when it is present. If everything on your machine is
+too old — macOS still ships 3.9 — it says so and gives you the two ways out, one of which is
+uv, which needs nothing else installed and fetches a Python for you.
+
+To type `barabar` from anywhere instead of `./barabar`:
 
 ```bash
-docker run --rm -it -v "$PWD/exports:/data:ro" barabar run /data
+make install            # symlinks it into ~/.local/bin, no sudo
 ```
 
 ### Everything else
 
 ```bash
+make demo               # skip the prompt, straight onto the bundled dataset
 make run DIR=exports/   # the close, on your own CSVs — identified by header, not filename
 make eval               # score against the held-out answer key, including the LLM rung
 make test               # the full suite
 ```
+
+`barabar demo` and `barabar run <dir>` are the same two, without the Makefile.
 
 <details>
 <summary>Other commands</summary>

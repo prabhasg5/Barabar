@@ -1,0 +1,60 @@
+#!/bin/sh
+# The command. `barabar` with no arguments is the whole interface -- it opens on what the
+# name means and one prompt, and enter runs the demo. `barabar demo` and `barabar run <dir>`
+# are the direct entries.
+#
+# A script rather than a console_scripts entry point, deliberately: the engine has zero
+# runtime dependencies, so requiring a build backend and an install step to type one word
+# would be the only setup in the project. `make install` symlinks this onto your PATH.
+#
+# It finds a usable interpreter rather than demanding one. Measured: the demo and all 199
+# tests pass on 3.10, 3.11, 3.12 and 3.13; 3.9 fails on `X | Y` in a signature. macOS still
+# ships 3.9 as `python3`, which is the only common machine where the search matters.
+set -e
+
+# Resolve symlinks the portable way. `readlink -f` is GNU-only and this has to work on a Mac.
+target=$0
+while [ -L "$target" ]; do
+    link=$(readlink "$target")
+    case $link in
+        /*) target=$link ;;
+        *)  target=$(dirname "$target")/$link ;;
+    esac
+done
+root=$(CDPATH= cd -- "$(dirname "$target")" && pwd)
+export PYTHONPATH="$root/src"
+
+usable() {
+    command -v "$1" >/dev/null 2>&1 || return 1
+    "$1" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null
+}
+
+# uv first where the project is present: it pins the version and fetches one if none is here.
+if command -v uv >/dev/null 2>&1 && [ -f "$root/pyproject.toml" ]; then
+    exec uv run --project "$root" python -m tui "$@"
+fi
+for py in python3.13 python3.12 python3.11 python3.10 python3 python; do
+    if usable "$py"; then
+        exec "$py" -m tui "$@"
+    fi
+done
+
+# Nothing usable. Say what is wrong and the two ways out, rather than a traceback about the
+# `|` operator that names no fix.
+have=$(python3 -V 2>&1 || echo "none found")
+cat >&2 <<MSG
+
+  barabar needs Python 3.10 or newer. On this machine: $have
+
+  Either install a newer Python --
+
+      macOS    brew install python@3.12
+      Ubuntu   sudo apt install python3.12
+
+  or let uv handle it, which needs nothing else installed --
+
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      ./barabar
+
+MSG
+exit 1

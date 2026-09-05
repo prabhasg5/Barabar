@@ -2,7 +2,9 @@
 name = "barabar"
 version = "0.1.0"
 description = "Settlement reconciliation for Indian D2C merchants"
-requires-python = ">=3.12"
+# Measured, not assumed: the demo and all 199 tests pass on 3.10, 3.11, 3.12 and
+# 3.13. 3.9 fails on `X | Y` in a signature. Developed on 3.12.
+requires-python = ">=3.10"
 dependencies = []
 
 [dependency-groups]

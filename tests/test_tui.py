@@ -225,8 +225,8 @@ def test_the_level_bar_gap_is_the_identity_residue():
 
 import io
 
-from tui.browse import (getkey, key_of, load_decisions, matches, ordered, save_decisions,
-                        two_sides, weight)
+from tui.browse import (Screen, getkey, interactive, key_of, load_decisions, matches,
+                        ordered, save_decisions, two_sides, weight)
 
 
 class Row:
@@ -352,3 +352,39 @@ def test_decisions_are_written_by_rename_so_a_half_write_is_never_the_state(tmp_
 
 def test_the_key_is_the_code_and_the_record_so_two_codes_on_one_record_stay_apart():
     assert key_of(Row("E13", "bank", "B1")) != key_of(Row("E01", "bank", "B1"))
+
+
+class Tty:
+    def isatty(self):
+        return True
+
+
+class Pipe:
+    def isatty(self):
+        return False
+
+
+def test_no_motion_does_not_disable_the_exception_browser():
+    """`--no-motion` suppresses the 400ms bar, not the ability to press a key.
+
+    It used to do both, because `Screen.live` read `pen.motion`. Someone recording a demo
+    without animation is exactly the person who still has to navigate 138 exceptions.
+
+    **Asserted on `Screen` itself, not on `interactive`.** The first version of this test
+    checked the helper, and the deliberate break -- putting `pen.motion and` back in front of
+    the call -- passed it. A test that cannot see the bug it was written for is the same green
+    tautology as `test_a_decoy_is_a_different_subset`.
+    """
+    from tui.palette import Pen
+    assert Screen(Pen(colour=True, motion=False), Tty(), Tty()).live is True
+    assert Screen(Pen(colour=True, motion=True), Tty(), Tty()).live is True
+    assert Screen(Pen(colour=True, motion=True), Pipe(), Tty()).live is False
+
+
+@pytest.mark.parametrize("stdin, stdout, live", [
+    (Tty(), Tty(), True), (Pipe(), Tty(), False), (Tty(), Pipe(), False),
+    (Pipe(), Pipe(), False)])
+def test_both_streams_have_to_be_a_terminal(stdin, stdout, live):
+    """Keys come from stdin; the alternate buffer and cursor moves go to stdout. A pipe on
+    either end and the browser prints its list once instead."""
+    assert interactive(stdin, stdout) is live

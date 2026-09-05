@@ -395,36 +395,76 @@ TITLE = """
 """
 
 
-def title(pen) -> None:
-    out(TITLE.format(name=pen.ink("BARABAR"), n1=pen.muted("barabar"),
-                     hb=pen.muted("hisaab barabar")))
-    out(f"  {pen.open('▸')} press enter to run the demo")
+def options(pen, again: bool = False) -> None:
+    """The three things you can do. Printed after the title and again after every run."""
+    out()
+    out(f"  {pen.open('▸')} press enter to run the demo{' again' if again else ''}")
     out(f"    {pen.ink('f')}  use your own files")
     out(f"    {pen.ink('q')}  quit")
     out()
 
 
-def menu(pen) -> None:
+def title(pen) -> None:
+    out(TITLE.format(name=pen.ink("BARABAR"), n1=pen.muted("barabar"),
+                     hb=pen.muted("hisaab barabar")).rstrip("\n"))
+    options(pen)
+
+
+def ask_folder(pen):
+    """Where your exports are. Says what it wants before asking, because "folder >" does not.
+
+    Returns None for "go back", which is what an empty line and a bad path both mean -- neither
+    is worth ending the session over.
+    """
+    out(f"  {pen.muted('The folder holding your CSV exports: orders, payments, refunds,')}")
+    out(f"  {pen.muted('settlements and the bank statement. Filenames do not matter -- each')}")
+    out(f"  {pen.muted('file is identified by its column headers, and anything else in the')}")
+    out(f"  {pen.muted('folder is skipped. Enter on its own goes back.')}")
+    out()
+    out(f"  {pen.muted('for example:')}  data/train    ~/Downloads/sep-exports")
+    # Dragging a folder onto a terminal quotes the path. Stripping them costs one line and
+    # saves the most likely first attempt from failing on something that is not the user.
+    where = ask("  folder > ").strip().strip('"').strip("'").strip()
+    if not where:
+        return None
+    folder = Path(where).expanduser()
+    if not folder.is_dir():
+        out()
+        out(f"  {pen.risk(str(folder) + ' is not a folder.')}")
+        return None
+    return folder
+
+
+def menu(pen) -> int:
+    """Loop until q. **A finished run is not the end of the session.**
+
+    Someone who has just watched the demo close is exactly the person who wants to point it at
+    their own exports next, and making them retype the command to do that is a step the program
+    can absorb. So every path comes back here and the options reprint.
+
+    `q` returns immediately and runs nothing. Anything unrecognised reprints the options rather
+    than falling through to the demo -- a stray keystroke should not start a run.
+    """
+    ran = False
     while True:
         choice = ask("  > ", "q").strip().lower()
         if choice in ("q", "quit", "exit"):
-            return
+            return 0
         if choice == "?":
             out(KEYS)
-            continue
-        if choice == "f":
-            where = ask("  folder > ").strip()
-            if not where:
-                continue
-            folder = Path(where).expanduser()
-            if not folder.is_dir():
-                out(f"  {pen.risk(f'{folder} is not a folder.')}")
-                continue
-            if close(folder, pen):
-                return
-            continue
-        close(DEMO, pen)
-        return
+        elif choice == "f":
+            out()
+            folder = ask_folder(pen)
+            if folder:
+                close(folder, pen)
+                ran = True
+            options(pen, again=ran)
+        elif choice == "":
+            close(DEMO, pen)
+            ran = True
+            options(pen, again=True)
+        else:
+            out(f"  {pen.muted('enter runs the demo · f your own files · ? keys · q quit')}")
 
 
 def main(argv: list[str]) -> int:
@@ -444,8 +484,7 @@ def main(argv: list[str]) -> int:
         out(f"  barabar, barabar demo, or barabar run <folder>. `?` for keys.")
         return 2
     title(pen)
-    menu(pen)
-    return 0
+    return menu(pen)
 
 
 if __name__ == "__main__":

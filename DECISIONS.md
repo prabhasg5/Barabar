@@ -2012,6 +2012,52 @@ delta is "coverage points", the share is "of payments" — and neither is writte
 count in `CLAUDE.md` and in the 2026-09-01 entry moved from five to six, which is the rule
 applying to a number the rule itself produced.
 
+### The menu loops, and a stray keystroke does not start a run
+
+Three corrections after watching someone use it.
+
+**A finished run is not the end of the session.** The first version ran once and exited.
+Someone who has just watched the demo close is exactly the person who wants to point it at
+their own exports next, and making them retype the command to do that is a step the program
+can absorb. Every path now returns to the options, which reprint as "run the demo again".
+
+**`q` runs nothing.** The first version fell through to the demo on any input it did not
+recognise, so a stray keystroke started a 5,000-record run. Unrecognised input now reprints
+the three options. Only an empty line runs anything.
+
+**`folder >` did not say what it wanted.** It now states what the folder should hold, that
+filenames do not matter because each file is identified by its headers, and that anything else
+in the folder is skipped — with two examples. An empty line and a bad path both mean "go back";
+neither is worth ending the session over. Quotes are stripped from the path, because dragging
+a folder onto a terminal adds them and that failure would not have been the user's.
+
+### Docker was built and deleted, for the reason the offset row was
+
+It was added on the "runs on every computer" argument and removed on measurement. Two facts
+killed it.
+
+**The floor is Python 3.10, not 3.12.** The demo and all 199 tests pass on 3.10, 3.11, 3.12 and
+3.13; only 3.9 fails, on `X | Y` in a signature. `requires-python` said `>=3.12` on nothing but
+the version it was developed on, and now says `>=3.10` on a measurement. That is every current
+Linux and any Mac with Homebrew Python — a much smaller gap than a container was being asked to
+close.
+
+**What is left of the gap, uv closes more cheaply.** macOS still ships 3.9 as `python3`. `uv`
+is one curl command, needs no daemon, and fetches a Python itself; Docker is a much heavier
+install plus a build. So the container bought nothing except for a judge who has Docker and
+refuses uv, which is not a person.
+
+**And it was never run.** There is no Docker daemon in the environment it was written in, so
+what shipped was an unverified claim in a repo someone reads — the same objection that deleted
+`primitives.offset_row` one session earlier, and the standard in `CLAUDE.md` is explicit:
+never claim something works without having run it. The honest options were to verify it or
+delete it, and deleting it also made the quickstart shorter.
+
+`./barabar` absorbed the real problem instead: it searches `python3.13` down to `python3` for
+anything ≥3.10, prefers uv where the project is present, and where nothing works prints the
+version it found and the two ways out rather than a traceback about the `|` operator that
+names no fix.
+
 ### `decisions.json`, and why it is not in `results.json`
 
 A reviewer's judgment is not engine output. Mixing them means a rerun either clobbers the

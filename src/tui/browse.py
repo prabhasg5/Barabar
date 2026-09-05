@@ -146,6 +146,24 @@ def getkey(stream=None) -> str:
     return ARROWS.get(stream.read(2), "\x1b")
 
 
+def interactive(stdin=None, stdout=None) -> bool:
+    """Whether there is a person at a terminal to press a key and watch a redraw.
+
+    **Both streams, and nothing else.** This used to read `pen.motion`, which meant
+    `--no-motion` silently turned the exception browser into a print-once list -- and someone
+    recording a demo without the 400ms bar animation is exactly the person who still needs to
+    navigate 138 exceptions. Motion is whether a thing moves; this is whether anyone is there.
+
+    Both streams matter and for different reasons: keys are read from stdin, and the alternate
+    buffer and cursor moves are written to stdout. A pipe on either end makes the browser print
+    its list once, which is what the piped demo in the README does.
+    """
+    stdin = stdin or sys.stdin
+    stdout = stdout or sys.stdout
+    return bool(getattr(stdin, "isatty", None) and stdin.isatty()
+                and getattr(stdout, "isatty", None) and stdout.isatty())
+
+
 class Screen:
     """Raw mode, the alternate buffer, and putting both back however we leave.
 
@@ -153,21 +171,24 @@ class Screen:
     rather than to a screen the browser scrolled away.
     """
 
-    def __init__(self, pen):
+    def __init__(self, pen, stdin=None, stdout=None):
         self.pen = pen
-        self.live = pen.motion and sys.stdin.isatty()
+        self.stdin = stdin or sys.stdin
+        self.stdout = stdout or sys.stdout
+        # Deliberately not `pen.motion and ...`. See `interactive`.
+        self.live = interactive(self.stdin, self.stdout)
         self.saved = None
 
     def __enter__(self):
         if self.live:
-            self.saved = termios.tcgetattr(sys.stdin.fileno())
-            tty.setcbreak(sys.stdin.fileno())
+            self.saved = termios.tcgetattr(self.stdin.fileno())
+            tty.setcbreak(self.stdin.fileno())
             print("\x1b[?1049h", end="")
         return self
 
     def __exit__(self, *_):
         if self.live:
-            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, self.saved)
+            termios.tcsetattr(self.stdin.fileno(), termios.TCSADRAIN, self.saved)
             print("\x1b[?1049l", end="", flush=True)
 
     def draw(self, lines: list[str]) -> None:
@@ -457,7 +478,7 @@ def browse(ledger, result, exceptions, pen, height: int = 24) -> dict:
             shown = [e for e in state["rows"] if matches(e, state["filter"])]
             state["cursor"] = max(0, min(state["cursor"], len(shown) - 1))
             screen.draw(list_lines(state) if view == "list" else detail_frame(state))
-            key = getkey()
+            key = getkey(self.stdin)
 
             if key in ("q", "\x1b", "\x03"):
                 if view == "detail":
