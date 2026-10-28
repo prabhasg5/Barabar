@@ -69,7 +69,7 @@ Press enter. It runs the close on the bundled held-out set and drops straight in
 exception list — `j`/`k` move, enter opens one, `r` reviews it, `/` filters, `q` quits.
 There are no subcommands to read. `?` shows the keys from anywhere.
 
-Needs **Python 3.10 or newer**, which is measured rather than assumed: the demo and all 199
+Needs **Python 3.10 or newer**, which is measured rather than assumed: the demo and all 200
 tests pass on 3.10, 3.11, 3.12 and 3.13. `./barabar` finds a usable interpreter itself and
 prefers [uv](https://docs.astral.sh/uv/) when it is present. If everything on your machine is
 too old — macOS still ships 3.9 — it says so and gives you the two ways out, one of which is
@@ -367,7 +367,7 @@ src/audit/          fee and GST variance against the contracted rate
 eval/               the harness, ground truth, results.json
 data/               both generated datasets, committed
 llm_cache/          every model response, keyed by prompt hash, committed
-tests/              150 tests, unit and property-based
+tests/              200 tests, unit and property-based
 ```
 
 Further reading in the repo: **[`ARCHITECTURE.md`](ARCHITECTURE.md)** is the decisions and the
